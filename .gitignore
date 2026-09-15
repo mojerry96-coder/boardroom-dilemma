@@ -1,0 +1,25 @@
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+*.log
+.DS_Store
+
+# Local tooling
+.claude/
+
+# Source material that is not published: course script, layout mockups, package archives
+*.zip
+*.pdf
+boardroom_dilemma_replication_package/references/
+
+# Raw generation files (the app ships the optimised copies in app/public)
+media/originals/
+media/video/
+media/build/
+media/preview/
+media/audio/
+
+# Old stand-in stills derived from the mockups (no longer used by the app)
+app/public/standins/
