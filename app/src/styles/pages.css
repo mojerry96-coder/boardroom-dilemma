@@ -542,10 +542,10 @@
   pointer-events: auto;
 }
 .page05__doc {
-  left: 60%;
+  left: 58%;
   top: 50%;
   translate: 0 -50%;
-  width: clamp(150px, 16vw, 270px);
+  width: clamp(190px, 20vw, 340px);
 }
 
 /* ── Page 06 — Stakeholder Pressure ────────────────────── */

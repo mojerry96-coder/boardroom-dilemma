@@ -27,7 +27,7 @@ const PAGE_MEDIA: Record<number, PageMedia> = {
     images: [TABLE_SHEETS.talkingPoints.src, TABLE_SHEETS.briefing.src, PROPS.docPaper],
     lines: [CHAPTERS[4].bridge, NARRATION.crisisLoad],
   },
-  5: { pictures: [SCENES.accountability.src], lines: [CHAPTERS[5].bridge, NARRATION.accountabilityLoad, GUIDE.newEvidence, GUIDE.reassess] },
+  5: { pictures: [SCENES.accountability.src], images: [TABLE_SHEETS.talkingPoints.src], lines: [CHAPTERS[5].bridge, NARRATION.accountabilityLoad, GUIDE.newEvidence, GUIDE.reassess] },
   6: {
     pictures: [SCENES.regulator.src, ...Object.values(PORTRAITS).map((p) => p.src), ...Object.values(PORTRAIT_BACKDROPS).map((p) => p.src)],
     images: Object.values(STAKEHOLDER_CLIPS).flatMap((clip) => [clip.start, clip.end]),

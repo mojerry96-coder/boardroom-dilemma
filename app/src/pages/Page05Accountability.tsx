@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FileText } from '@phosphor-icons/react';
-import { SCENES } from '../assets';
+import { SCENES, TABLE_SHEETS } from '../assets';
 import { AllocationSliders, Readouts } from '../components/Allocation';
 import { DocumentDialog, TableArtifact } from '../components/Documents';
 import { usePageIntro } from '../components/Experience';
@@ -114,10 +114,10 @@ export function Page05Accountability() {
           <div className="page05__docs">
             <TableArtifact
               className="page05__doc"
+              photo={TABLE_SHEETS.talkingPoints}
               title={DOCUMENTS.supervisor.title}
               label={`Open ${DOCUMENTS.supervisor.title}`}
               folio
-              rotate={1}
               reviewed={acc.statementRead}
               glow={!acc.statementRead}
               onOpen={() => setOpen(true)}
