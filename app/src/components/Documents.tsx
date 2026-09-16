@@ -1,7 +1,10 @@
-import { Fragment, useEffect, useRef, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { ArrowRight, X } from '@phosphor-icons/react';
+import { NEWSPRINT, PROPS, type TableSheet } from '../assets';
 import { BRAND } from '../sim/content';
 import type { Block, DocDef } from '../sim/documents';
-import { CloseIcon, DeltaMark } from './Icons';
+import { DeltaMark } from './Icons';
+import { Picture } from './Picture';
 
 /** Renders **bold** and ==highlight== markers. */
 export function Rich({ text }: { text: string }) {
@@ -107,6 +110,13 @@ function renderBlock(b: Block, i: number): ReactNode {
           {b.text}
         </p>
       );
+    case 'photo':
+      return (
+        <figure key={i} className="doc-photo">
+          <Picture src={b.src} alt={b.alt} sizes="(max-width: 819px) 92vw, 720px" />
+          {b.caption && <figcaption>{b.caption}</figcaption>}
+        </figure>
+      );
     case 'headline':
       return (
         <div key={i} className="doc-headline">
@@ -120,7 +130,7 @@ function renderBlock(b: Block, i: number): ReactNode {
 export function Paper({ doc, headingId }: { doc: DocDef; headingId?: string }) {
   if (doc.kind === 'news') {
     return (
-      <article className="paper paper--news" aria-labelledby={headingId}>
+      <article className="paper paper--news" aria-labelledby={headingId} style={{ backgroundImage: `url(${NEWSPRINT})` }}>
         <header className="news-masthead">
           <p className="news-masthead__name">{doc.masthead}</p>
           <p className="news-masthead__meta">{doc.footer}</p>
@@ -133,7 +143,11 @@ export function Paper({ doc, headingId }: { doc: DocDef; headingId?: string }) {
     );
   }
   return (
-    <article className={`paper paper--${doc.kind}`} aria-labelledby={headingId}>
+    <article
+      className={`paper paper--${doc.kind}${doc.letterhead ? ' paper--letterhead' : ''}`}
+      aria-labelledby={headingId}
+      style={doc.letterhead ? { backgroundImage: `url(${PROPS.docPaper})` } : undefined}
+    >
       <header className="paper__header">
         <div className="paper__org">
           <DeltaMark size={26} />
@@ -150,15 +164,8 @@ export function Paper({ doc, headingId }: { doc: DocDef; headingId?: string }) {
   );
 }
 
-interface DocumentDialogProps {
-  doc: DocDef | null;
-  onClose: () => void;
-  closeLabel?: string;
-  footer?: ReactNode;
-}
-
-/** Accessible document viewer using the native modal dialog (focus trap, Escape, focus return). */
-export function DocumentDialog({ doc, onClose, closeLabel = 'Close document', footer }: DocumentDialogProps) {
+/** Opens a native modal dialog while `open` is true; handles Escape, backdrop clicks and stale close events. */
+export function useModal(open: boolean, onClose: () => void) {
   const ref = useRef<HTMLDialogElement>(null);
   // The native "close" event is queued, so after we close the dialog ourselves it can arrive
   // after the next document has opened. Ignore closes we initiated.
@@ -166,50 +173,58 @@ export function DocumentDialog({ doc, onClose, closeLabel = 'Close document', fo
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (doc && !el.open) el.showModal();
-    if (!doc && el.open) {
+    if (open && !el.open) el.showModal();
+    if (!open && el.open) {
       selfClosed.current = true;
       el.close();
     }
-  }, [doc]);
+  }, [open]);
 
-  return (
-    <dialog
-      ref={ref}
-      className="doc-dialog"
-      aria-labelledby="doc-dialog-title"
-      onClose={() => {
-        if (selfClosed.current) {
-          selfClosed.current = false;
-          return;
-        }
-        if (doc) onClose();
-      }}
-      onCancel={(e) => {
+  const props = {
+    ref,
+    onClose: () => {
+      if (selfClosed.current) {
+        selfClosed.current = false;
+        return;
+      }
+      if (open) onClose();
+    },
+    onCancel: (e: { preventDefault: () => void }) => {
+      e.preventDefault();
+      if (open) onClose();
+    },
+    onKeyDown: (e: { key: string; preventDefault: () => void }) => {
+      if (e.key === 'Escape') {
         e.preventDefault();
-        if (doc) onClose();
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          if (doc) onClose();
-        }
-      }}
-      onClick={(e) => {
-        if (e.target === ref.current && doc) onClose();
-      }}
-    >
+        if (open) onClose();
+      }
+    },
+    onClick: (e: { target: EventTarget }) => {
+      if (e.target === ref.current && open) onClose();
+    },
+  };
+  return props;
+}
+
+interface DocumentDialogProps {
+  doc: DocDef | null;
+  onClose: () => void;
+  closeLabel?: string;
+  footer?: ReactNode;
+}
+
+/** Artifact viewer (spec §10): the document expands over a blurred scene and returns to the table on close. */
+export function DocumentDialog({ doc, onClose, closeLabel = 'Close document', footer }: DocumentDialogProps) {
+  const modal = useModal(!!doc, onClose);
+  return (
+    <dialog {...modal} className="doc-dialog" aria-labelledby="doc-dialog-title">
       {doc && (
         <div className="doc-dialog__frame">
-          <div className="doc-dialog__bar">
-            <p className="doc-dialog__label">{doc.title}</p>
-            <button type="button" className="btn btn--light btn--small" onClick={onClose} autoFocus>
-              <CloseIcon width={16} height={16} />
-              {closeLabel}
-            </button>
-          </div>
+          <button type="button" className="doc-dialog__close" onClick={onClose} aria-label={closeLabel} title={closeLabel} autoFocus>
+            <X size={22} />
+          </button>
           <div className="doc-dialog__scroll">
-            <Paper doc={doc} headingId="doc-dialog-title" />
+            <DocumentBody key={doc.id} doc={doc} />
           </div>
           {footer && <div className="doc-dialog__footer">{footer}</div>}
         </div>
@@ -218,43 +233,126 @@ export function DocumentDialog({ doc, onClose, closeLabel = 'Close document', fo
   );
 }
 
-/** A document lying on the table in a scene — opens the dialog. */
-export function TableDocument({
+/** Key facts first (with the document's photo), then the full text on request. */
+function DocumentBody({ doc }: { doc: DocDef }) {
+  const [full, setFull] = useState(!doc.keyFacts?.length);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  if (full || !doc.keyFacts) return <Paper doc={doc} headingId="doc-dialog-title" />;
+
+  const photo = doc.blocks.find((b): b is Extract<Block, { t: 'photo' }> => b.t === 'photo');
+  const news = doc.kind === 'news';
+  return (
+    <article
+      ref={bodyRef}
+      className={`paper doc-summary${news ? ' paper--news' : ''}${doc.letterhead ? ' paper--letterhead' : ''}`}
+      aria-labelledby="doc-dialog-title"
+      style={news ? { backgroundImage: `url(${NEWSPRINT})` } : doc.letterhead ? { backgroundImage: `url(${PROPS.docPaper})` } : undefined}
+    >
+      {news ? (
+        <header className="news-masthead">
+          <p className="news-masthead__name">{doc.masthead}</p>
+          <p className="news-masthead__meta">{doc.footer}</p>
+        </header>
+      ) : (
+        <header className="paper__header">
+          <div className="paper__org">
+            <DeltaMark size={26} />
+            <span>{BRAND.org}</span>
+          </div>
+          {doc.classification && <span className="paper__stamp">{doc.classification}</span>}
+        </header>
+      )}
+      <h2 id="doc-dialog-title" className="paper__title">
+        {doc.heading}
+      </h2>
+      {photo && (
+        <figure className="doc-photo doc-summary__photo">
+          <Picture src={photo.src} alt={photo.alt} sizes="(max-width: 819px) 92vw, 720px" />
+        </figure>
+      )}
+      <p className="doc-summary__kicker">Key facts</p>
+      <ul className="doc-summary__facts stagger">
+        {doc.keyFacts.map((fact, i) => (
+          <li key={fact} style={{ '--i': i } as CSSProperties}>
+            <Rich text={fact} />
+          </li>
+        ))}
+      </ul>
+      <button type="button" className="doc-summary__more" onClick={() => setFull(true)}>
+        Read the full document
+        <ArrowRight size={18} aria-hidden="true" />
+      </button>
+    </article>
+  );
+}
+
+/** A typeset document lying on the table (spec §9 interactive artifact). */
+export function TableArtifact({
   title,
-  kicker,
-  onOpen,
-  state,
+  label,
+  stamp,
+  reviewed,
+  disabled,
+  glow,
+  folio,
+  photo,
+  rotate = -2,
+  style,
   className,
+  onOpen,
 }: {
   title: string;
-  kicker: string;
-  onOpen: () => void;
-  state: 'waiting' | 'active' | 'reviewed' | 'locked';
+  label: string;
+  stamp?: string;
+  reviewed?: boolean;
+  disabled?: boolean;
+  glow?: boolean;
+  folio?: boolean;
+  /** A photographed sheet to show instead of the typeset one. */
+  photo?: TableSheet;
+  rotate?: number;
+  style?: CSSProperties;
   className?: string;
+  onOpen: () => void;
 }) {
   return (
     <button
       type="button"
-      className={`table-doc table-doc--${state}${className ? ` ${className}` : ''}`}
+      className={`interactive-artifact${glow ? ' artifact-glow' : ''}${className ? ` ${className}` : ''}`}
+      style={{ ...style, '--rot': `${rotate}deg` } as CSSProperties}
       onClick={onOpen}
-      aria-disabled={state === 'locked' || undefined}
-      aria-label={`${title}${state === 'reviewed' ? ' (reviewed)' : state === 'locked' ? ' (not yet available)' : ''}`}
+      aria-disabled={disabled || undefined}
+      aria-label={`${label}${reviewed ? ', reviewed' : disabled ? ', not yet available' : ''}`}
     >
-      <span className="table-doc__sheet" aria-hidden="true">
-        <span className="table-doc__org">
-          <DeltaMark size={14} /> {BRAND.org}
+      {photo ? (
+        <span className={`table-photo${folio ? ' table-photo--folio' : ''}`} aria-hidden="true">
+          <span className="table-photo__sheet">
+            <img src={photo.src} alt="" draggable={false} />
+            <span
+              className="table-photo__title"
+              style={{ top: `${photo.band[0] * 100}%`, height: `${(photo.band[1] - photo.band[0]) * 100}%`, left: `${photo.titleX * 100}%` }}
+            >
+              {title}
+            </span>
+            {stamp && <span className="table-sheet__stamp table-photo__stamp">{stamp}</span>}
+          </span>
         </span>
-        <span className="table-doc__title">{title}</span>
-        <span className="table-doc__lines">
-          <i />
-          <i />
-          <i />
-          <i />
+      ) : (
+        <span className={`table-sheet${folio ? ' table-sheet--folio' : ''}`} aria-hidden="true">
+          <span className="table-sheet__org">
+            <DeltaMark size={12} /> {BRAND.org}
+          </span>
+          <span className="table-sheet__title">{title}</span>
+          <span className="table-sheet__lines">
+            <i />
+            <i />
+            <i />
+            <i />
+          </span>
+          {stamp && <span className="table-sheet__stamp">{stamp}</span>}
         </span>
-      </span>
-      <span className="table-doc__label">
-        {state === 'reviewed' ? 'Reviewed' : kicker}
-      </span>
+      )}
+      {reviewed && <span className="interactive-artifact__reviewed">Reviewed ✓</span>}
     </button>
   );
 }

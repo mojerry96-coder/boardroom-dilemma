@@ -1,115 +1,154 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
+import { Quotes } from '@phosphor-icons/react';
 import { PORTRAIT_BACKDROPS, PORTRAITS, SCENES } from '../assets';
-import { ChoicePicker, OutcomeCard } from '../components/Choices';
-import { ContextView, DockHeader, MediaQuote } from '../components/Dock';
-import { useNarrateOnce, useSpeakOnce } from '../components/Narration';
-import { Stage } from '../components/Stage';
-import { NARRATION, PAGE_META, STAKEHOLDERS, UI } from '../sim/content';
+import { usePageIntro } from '../components/Experience';
+import { Picture } from '../components/Picture';
+import { useSpeakOnce } from '../components/Narration';
+import { revealTiming, TYPE_SPEED, TypeText, useDelayed } from '../components/Reveal';
+import { SimulationStage } from '../components/SimulationStage';
+import { OutcomePanel, PillButton, StageCopy } from '../components/ui';
+import { BRAND, NARRATION, PAGE_META, STAKEHOLDERS } from '../sim/content';
 import { stakeholderExtras } from '../sim/derive';
+import { OBJECTIVES } from '../sim/experience';
+import { shuffled } from '../sim/shuffle';
 import { useSim } from '../sim/store';
-import type { StakeholderId } from '../sim/types';
+import { OPTS, type Opt, type StakeholderId } from '../sim/types';
 
-// Screens 5a–5d — the stakeholder and their words are on the media; the dock holds the reply.
+// Page 06 — Stakeholder Pressure (spec §17). One stakeholder in the hero at a time;
+// answered stakeholders move into the "They'll remember" strip.
 
-const thumbnail = (id: StakeholderId) => (id === 'regulator' ? SCENES.regulator.src : PORTRAITS[id].src);
+const SUBTITLE = 'One conversation at a time. Every promise will be remembered.';
+/** The voice starts this long after a stakeholder is shown (see useSpeakOnce). */
+const VOICE_LEAD_MS = 400;
+
+const imageOf = (id: StakeholderId) => (id === 'regulator' ? SCENES.regulator.src : PORTRAITS[id].src);
 
 export function Page06Stakeholders() {
   const { sim, dispatch } = useSim();
   const [showing, setShowing] = useState<StakeholderId | null>(null);
-  const [ctx, setCtx] = useState(false);
+  const [selected, setSelected] = useState<Opt | null>(null);
   const firstOpen = STAKEHOLDERS.find((s) => !sim.stakeholderResponses[s.id]);
   const active = STAKEHOLDERS.find((s) => s.id === showing) ?? firstOpen ?? STAKEHOLDERS[STAKEHOLDERS.length - 1];
   const answer = sim.stakeholderResponses[active.id];
-  const index = STAKEHOLDERS.indexOf(active);
+  const order = useMemo(() => shuffled(OPTS, sim.seed, `stakeholder-${active.id}`), [sim.seed, active.id]);
 
-  // The first stakeholder speaks once the page narration has finished.
-  const introDone = useNarrateOnce('stakeholders-load', NARRATION.stakeholdersLoad);
-  useSpeakOnce(`stakeholder-${active.id}`, active.line, !answer && (index > 0 || introDone));
+  const intro = usePageIntro('stakeholders', NARRATION.stakeholdersLoad, firstOpen === STAKEHOLDERS[0]);
+  const timing = revealTiming(PAGE_META[6].title, SUBTITLE, OBJECTIVES[6]);
+  const [firstShown] = useState(active.id);
+  const openingDelay = intro.animate ? timing.controlsAt : 0;
+  const onStage = useDelayed(intro.ready, openingDelay);
+
+  // The stakeholder speaks once they are on screen; their words type in with the voice, then the choices appear.
+  const spoken = useSpeakOnce(`stakeholder-${active.id}`, active.line, !answer && onStage);
+  const quoteDelay = (active.id === firstShown ? openingDelay : 0) + VOICE_LEAD_MS;
 
   const remembered = STAKEHOLDERS.filter((s) => s.id !== active.id && sim.stakeholderResponses[s.id]);
-  const portrait = active.id === 'regulator' ? null : PORTRAITS[active.id];
-  const backdrop = active.id === 'regulator' ? null : PORTRAIT_BACKDROPS[active.id];
+  const isRegulator = active.id === 'regulator';
+  const quoteSize = active.line.length > 150 ? 'is-long' : active.line.length > 100 ? 'is-medium' : '';
 
-  let body: ReactNode;
-  if (ctx) {
-    body = (
-      <ContextView onBack={() => setCtx(false)}>
-        <p className="context-title">
-          {active.name} · {active.role}
-        </p>
-        <p>{active.situation}</p>
-      </ContextView>
-    );
-  } else if (answer) {
-    body = (
-      <OutcomeCard
-        chosen={active.short[answer]}
-        text={active.reaction[answer]}
-        extra={stakeholderExtras(active.id, answer, sim)}
-        feedback={active.feedback}
-        continueLabel={firstOpen ? `Next: ${firstOpen.name}` : 'Continue'}
-        onContinue={() => {
-          setCtx(false);
-          if (firstOpen) setShowing(null);
-          else dispatch({ type: 'GO', page: 7 });
-        }}
-      />
-    );
-  } else {
-    body = (
-      <ChoicePicker
-        key={active.id}
-        prompt={UI.respond}
-        labels={active.short}
-        options={active.options}
-        seed={sim.seed}
-        shuffleKey={`stakeholder-${active.id}`}
-        confirmLabel="Respond"
-        onConfirm={(opt) => {
-          dispatch({ type: 'CHOOSE_STAKEHOLDER', id: active.id, opt });
-          setShowing(active.id);
-        }}
-      />
-    );
-  }
+  const respond = () => {
+    if (!selected) return;
+    dispatch({ type: 'CHOOSE_STAKEHOLDER', id: active.id, opt: selected });
+    setShowing(active.id);
+    setSelected(null);
+  };
 
   return (
-    <Stage
-      image={backdrop ?? SCENES.regulator}
-      label="Stakeholder pressure"
-      chapter={index === 0 && !answer ? { title: PAGE_META[6].title, subtitle: PAGE_META[6].subtitle } : undefined}
-      quote={!answer ? <MediaQuote key={active.id} speaker={`${active.name} · ${active.role}`} text={active.line} /> : undefined}
-      overlay={
-        portrait ? (
-          <figure className="portrait-card" key={active.id}>
-            <img src={portrait.src} alt={portrait.alt} />
-            <figcaption className="portrait-card__meta">
-              <p className="portrait-card__name">{active.name}</p>
-              <p className="portrait-card__role">{active.role}</p>
-            </figcaption>
+    <SimulationStage
+      page={6}
+      image={isRegulator ? SCENES.regulator : PORTRAIT_BACKDROPS[active.id as Exclude<StakeholderId, 'regulator'>]}
+      label="Stakeholder Pressure"
+      wash="strong"
+      intro={intro}
+      backdrop={
+        !isRegulator ? (
+          <figure className="page06__portrait" key={active.id}>
+            <Picture
+              src={PORTRAITS[active.id as Exclude<StakeholderId, 'regulator'>].src}
+              alt={PORTRAITS[active.id as Exclude<StakeholderId, 'regulator'>].alt}
+              sizes="(max-width: 819px) 100vw, 40vw"
+            />
           </figure>
         ) : undefined
       }
     >
-      <DockHeader
-        page={6}
-        title="Stakeholders"
-        steps={STAKEHOLDERS.length}
-        current={index + (answer ? 1 : 0)}
-        onContext={() => setCtx((c) => !c)}
-        contextOpen={ctx}
-        aside={
-          remembered.length > 0 ? (
-            <span className="avatars" role="img" aria-label={`They'll remember: ${remembered.map((s) => s.name).join(', ')}`}>
-              {remembered.map((s) => {
-                const opt = sim.stakeholderResponses[s.id];
-                return <img key={s.id} src={thumbnail(s.id)} alt="" title={`${s.name}: ${opt ? s.short[opt] : ''}`} />;
-              })}
-            </span>
-          ) : null
-        }
-      />
-      {body}
-    </Stage>
+      <StageCopy className="page06__copy" eyebrow={BRAND.eyebrow} title={PAGE_META[6].title} subtitle={SUBTITLE} objective={OBJECTIVES[6]} intro={intro}>
+        <div className="page06__quote" key={active.id}>
+          <p className="page06__quote-label">
+            {active.name}
+            <span className="page06__quote-role"> · {active.role}</span>
+          </p>
+          <blockquote className={`page06__quote-text ${quoteSize}`}>
+            <Quotes className="page06__quote-mark" size={30} weight="fill" aria-hidden="true" />
+            <TypeText text={`${active.line}”`} perChar={TYPE_SPEED.quote} delay={quoteDelay} animate={!answer} />
+          </blockquote>
+        </div>
+
+        <div id="controls">
+          {answer ? (
+            <OutcomePanel
+              className="page06__outcome"
+              chosen={active.short[answer]}
+              text={active.reaction[answer]}
+              extra={stakeholderExtras(active.id, answer, sim)}
+              feedback={active.feedback}
+              continueLabel={firstOpen ? `Next: ${firstOpen.name}` : 'Continue'}
+              onContinue={() => {
+                if (firstOpen) setShowing(null);
+                else dispatch({ type: 'GO', page: 7 });
+              }}
+            />
+          ) : spoken ? (
+            <div className="page06__choices stagger" role="group" aria-label={`Your response to ${active.name}`} key={active.id}>
+              {order.map((opt, i) => (
+                <button
+                  key={opt}
+                  type="button"
+                  className="choice-row choice-row--light choice-row--numbered"
+                  style={{ '--i': i } as CSSProperties}
+                  aria-pressed={selected === opt}
+                  onClick={() => setSelected(opt)}
+                >
+                  <span className="choice-row__num" aria-hidden="true">
+                    {i + 1}
+                  </span>
+                  <span className="choice-row__body">
+                    <span>{active.short[opt]}</span>
+                    {selected === opt ? <span className="choice-row__full">{active.options[opt]}</span> : <span className="sr-only">. {active.options[opt]}</span>}
+                  </span>
+                </button>
+              ))}
+              {selected && (
+                <div className="page06__respond">
+                  <PillButton size="small" variant="blue" onClick={respond}>
+                    Respond
+                  </PillButton>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </StageCopy>
+
+      {remembered.length > 0 && intro.ready && (
+        <section className={`page06__memory${answer ? '' : ' is-choosing'}`} aria-label="They'll remember">
+          <h2 className="page06__memory-title">They’ll remember</h2>
+          <div className="page06__memory-grid">
+            {remembered.map((s) => {
+              const opt = sim.stakeholderResponses[s.id];
+              return (
+                <figure key={s.id} className="page06__memory-card">
+                  <Picture src={imageOf(s.id)} alt="" sizes="160px" />
+                  <figcaption>
+                    <span className="page06__memory-name">{s.name}</span>
+                    <span className="page06__memory-quote">You: {opt ? s.short[opt] : ''}</span>
+                  </figcaption>
+                </figure>
+              );
+            })}
+          </div>
+        </section>
+      )}
+    </SimulationStage>
   );
 }

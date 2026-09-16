@@ -37,9 +37,12 @@ interface VoiceFieldProps {
   hint?: string;
   disabled?: boolean;
   showLabel?: boolean;
+  /** compact: single-line pill; area: multi-line box; onPaper: help text styled for light surfaces. */
+  variant?: 'default' | 'compact' | 'area';
+  onPaper?: boolean;
 }
 
-export function VoiceField({ label, value, onChange, placeholder, rows = 3, minChars, hint, disabled, showLabel = true }: VoiceFieldProps) {
+export function VoiceField({ label, value, onChange, placeholder, rows = 3, minChars, hint, disabled, showLabel = true, variant = 'default', onPaper }: VoiceFieldProps) {
   const id = useId();
   const [recording, setRecording] = useState(false);
   const [interim, setInterim] = useState('');
@@ -93,7 +96,7 @@ export function VoiceField({ label, value, onChange, placeholder, rows = 3, minC
   const short = minChars !== undefined && count < minChars;
 
   return (
-    <div className={`voice-field${recording ? ' is-recording' : ''}`}>
+    <div className={`voice-field${variant !== 'default' ? ` voice-field--${variant}` : ''}${onPaper ? ' on-paper' : ''}${recording ? ' is-recording' : ''}`}>
       <label htmlFor={id} className={showLabel ? 'field-label' : 'sr-only'}>
         {label}
       </label>
@@ -115,7 +118,7 @@ export function VoiceField({ label, value, onChange, placeholder, rows = 3, minC
             aria-label={recording ? 'Stop voice input' : 'Speak your answer'}
             onClick={recording ? stop : start}
           >
-            {recording ? <StopIcon width={16} height={16} /> : <MicIcon />}
+            {recording ? <StopIcon size={16} /> : <MicIcon />}
           </button>
         )}
       </div>

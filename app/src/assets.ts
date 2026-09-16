@@ -1,4 +1,5 @@
-import type { Opt, StakeholderId } from './sim/types';
+import { IMAGE_VARIANTS } from './imageManifest';
+import type { EvidenceId, Opt, StakeholderId } from './sim/types';
 
 // Asset manifest. Scene stills are generated (Seedream 5.0 Pro / Soul 2.0) and optimised
 // into public/scenes. Films live in public/films with WebVTT captions.
@@ -25,6 +26,12 @@ export const SCENES = {
     src: scene('role.jpg'),
     alt: 'Three board members sit back across the marble table, silent and expectant, a closed board pack in front of the learner.',
     position: '60% 40%',
+    standIn: false,
+  },
+  desk: {
+    src: scene('desk.jpg'),
+    alt: 'Top view of a polished grey marble boardroom table in soft daylight.',
+    position: '50% 50%',
     standIn: false,
   },
   tabletop: {
@@ -115,9 +122,21 @@ export const FILM_IMAGES: Record<string, string> = {
 };
 
 export interface FilmSource {
+  /** 720p — the default. */
   src: string;
   captions: string;
+  /** 480p rendition, used on slow connections or when the 720p film stalls. */
+  low?: string;
+  /** Still shown while the film loads. */
+  poster?: string;
 }
+
+const filmSource = (name: string): FilmSource => ({
+  src: film(`${name}.mp4`),
+  captions: film(`${name}.vtt`),
+  low: film(`${name}_480.mp4`),
+  poster: film(`${name}_poster.webp`),
+});
 
 /** Final films with WebVTT captions. Set to null to fall back to the storyboard preview. */
 export const FILMS: {
@@ -125,14 +144,82 @@ export const FILMS: {
   executiveSetup: FilmSource | null;
   executiveBranch: Record<Opt, FilmSource | null>;
 } = {
-  intro: { src: film('intro.mp4'), captions: film('intro.vtt') },
-  executiveSetup: { src: film('executive_setup.mp4'), captions: film('executive_setup.vtt') },
+  intro: filmSource('intro'),
+  executiveSetup: filmSource('executive_setup'),
   executiveBranch: {
-    A: { src: film('executive_branch_a.mp4'), captions: film('executive_branch_a.vtt') },
-    B: { src: film('executive_branch_b.mp4'), captions: film('executive_branch_b.vtt') },
-    C: { src: film('executive_branch_c.mp4'), captions: film('executive_branch_c.vtt') },
-    D: { src: film('executive_branch_d.mp4'), captions: film('executive_branch_d.vtt') },
+    A: filmSource('executive_branch_a'),
+    B: filmSource('executive_branch_b'),
+    C: filmSource('executive_branch_c'),
+    D: filmSource('executive_branch_d'),
   },
 };
 
 export const filmPath = film;
+
+/**
+ * DBA · MIVA Open University logo animation (transparent, cropped to the mark), from media/DBA Logo Intro.mov.
+ * Safari needs HEVC with alpha; other browsers use VP9 with alpha. The mark finishes building at `buildMs`.
+ */
+export const LOGO_STING = {
+  webm: film('logo_sting.webm'),
+  hevc: film('logo_sting.mov'),
+  still: film('logo_sting.png'),
+  buildMs: 2600,
+};
+
+const prop = (file: string) => `${base}props/${file}`;
+
+/** Photographed props for Pages 4 and 8 (media/originals/new 2, cut out and optimised). */
+export const PROPS = {
+  /** Open leather Board pack, 1562 × 824. Page 8's pack layout matches its paper areas. */
+  packOpen: prop('boardpack_open.webp'),
+  /** Embossed cover card shown on the pack's right page when no section is open. */
+  packCover: prop('boardpack_cover.webp'),
+  /** Wax seal pressed onto the pack when the case is locked. */
+  lockedSeal: prop('boardpack_locked_seal.webp'),
+  /** Letterhead paper for the Page 4 documents when opened. */
+  docPaper: prop('doc_paper.webp'),
+};
+
+export interface TableSheet {
+  src: string;
+  /** Top and bottom of the slate header band, as fractions of the image height. */
+  band: [number, number];
+  /** Where the typeset title starts inside the band, as a fraction of the image width (clear of the logo). */
+  titleX: number;
+}
+
+/** Page 4 documents on the table: cut-out sheet photographs with the title typeset into the header band. */
+export const TABLE_SHEETS: Record<'talkingPoints' | 'briefing', TableSheet> = {
+  talkingPoints: { src: prop('table_talking_points.webp'), band: [0.0238, 0.1149], titleX: 0.25 },
+  briefing: { src: prop('table_briefing_sheet.webp'), band: [0.019, 0.08], titleX: 0.2 },
+};
+
+/** AVIF and WebP `srcset`s for a photo in public/, when media/optimise_media.py has made them. */
+export function pictureSources(src: string) {
+  const variants = IMAGE_VARIANTS[src.startsWith(base) ? src.slice(base.length) : src];
+  if (!variants) return null;
+  const srcset = (list: [number, string][]) => list.map(([w, file]) => `${base}${file} ${w}w`).join(', ');
+  return { avif: srcset(variants.avif), webp: srcset(variants.webp) };
+}
+
+const evidence = (file: string) => `${base}evidence/${file}`;
+
+/** Evidence Desk folders: overhead cut-outs with a soft contact shadow (labels are typeset over them). */
+export const FOLDER_ART: Record<EvidenceId, string> = {
+  incident: evidence('folder_incident.webp'),
+  nearMiss: evidence('folder_nearMiss.webp'),
+  payments: evidence('folder_payments.webp'),
+  correspondence: evidence('folder_correspondence.webp'),
+  news: evidence('folder_news.webp'),
+};
+
+/** Photographs printed inside the evidence documents. */
+export const DOC_PHOTOS = {
+  incident: evidence('doc_incident_photo.jpg'),
+  nearMiss: evidence('doc_near_miss_photo.jpg'),
+  news: evidence('doc_news_photo.jpg'),
+};
+
+/** Paper texture behind the news clipping. */
+export const NEWSPRINT = evidence('newsprint.jpg');

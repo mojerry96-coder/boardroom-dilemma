@@ -1,6 +1,8 @@
 // Typeset in-world documents. Text from CONTENT_LOGIC_FINALIZATION.md sections 3, 4 and 19.7,
 // and the DBA9101 Screen 0 context. Inline markers: **bold**, ==learner highlight==.
 
+import { DOC_PHOTOS } from '../assets';
+
 export type Block =
   | { t: 'h'; text: string }
   | { t: 'p'; text: string }
@@ -10,7 +12,8 @@ export type Block =
   | { t: 'table'; head: string[]; rows: string[][]; numeric?: number[] }
   | { t: 'sign'; lines: string[] }
   | { t: 'note'; text: string }
-  | { t: 'headline'; text: string; standfirst?: string };
+  | { t: 'headline'; text: string; standfirst?: string }
+  | { t: 'photo'; src: string; alt: string; caption?: string };
 
 export type DocKind = 'report' | 'memo' | 'audit' | 'news' | 'statement' | 'brief';
 
@@ -24,6 +27,10 @@ export interface DocDef {
   blocks: Block[];
   footer?: string;
   alt: string;
+  /** Shown first when the document opens; the full text follows on request. */
+  keyFacts?: string[];
+  /** Printed on the photographed letterhead paper (PROPS.docPaper). */
+  letterhead?: boolean;
 }
 
 export const DOCUMENTS = {
@@ -34,6 +41,12 @@ export const DOCUMENTS = {
     heading: 'Company Secretariat — Brief for the Emergency Board Session',
     classification: 'CONFIDENTIAL',
     alt: 'The context brief for your role.',
+    keyFacts: [
+      "You advise DIN's Board as **Company Secretary and Strategic Advisor**.",
+      'A contract worker died three weeks ago on a line running with a **bypassed safety interlock**.',
+      'Internal audit has flagged **“facilitation payments”** through a logistics agent. UK headquarters says it was never told.',
+      'A journalist is asking questions; the regulator knows but has not opened an inquiry. **The Board meets in 72 hours.**',
+    ],
     blocks: [
       {
         t: 'p',
@@ -63,6 +76,11 @@ export const DOCUMENTS = {
     heading: 'Preliminary Incident Report',
     classification: 'CONFIDENTIAL',
     alt: 'Preliminary incident report for the fatal incident on 1 June 2026.',
+    keyFacts: [
+      'A contract worker was fatally injured on **1 June 2026** at the DIN Ogun State Production Facility.',
+      'The line’s safety interlock was under a **temporary bypass** that had run longer than normally allowed.',
+      'The file refers to approval to keep producing — but **the full approval chain has not been verified**.',
+    ],
     blocks: [
       {
         t: 'meta',
@@ -79,6 +97,12 @@ export const DOCUMENTS = {
       {
         t: 'p',
         text: 'At approximately 14:20 on 1 June 2026, a contract worker was fatally injured during an operating incident on a production line at the DIN Ogun State facility. Emergency response procedures were activated, the affected line was isolated, and the relevant internal functions were notified.',
+      },
+      {
+        t: 'photo',
+        src: DOC_PHOTOS.incident,
+        alt: 'The affected roller-conveyor production line, stopped, with yellow-and-black hazard markings and a yellow warning stand on the factory floor.',
+        caption: 'Figure 1. Affected production line after isolation, 1 June 2026. Photo: DIN HSSE.',
       },
       { t: 'h', text: '2. Equipment condition identified during initial review' },
       {
@@ -132,6 +156,11 @@ export const DOCUMENTS = {
     heading: 'Near-Miss Report',
     classification: 'INTERNAL USE ONLY',
     alt: 'Near-miss report dated 4 February 2026 for the same production line.',
+    keyFacts: [
+      'On **4 February 2026**, the same line did not stop when the interlock should have activated.',
+      'The interlock was already under a **temporary bypass** pending maintenance.',
+      'The report was closed locally — with **no record that the interlock was ever restored**.',
+    ],
     blocks: [
       {
         t: 'meta',
@@ -152,6 +181,12 @@ export const DOCUMENTS = {
       { t: 'h', text: '2. Initial technical observation' },
       { t: 'p', text: 'Maintenance confirmed that the interlock was operating under a temporary bypass pending planned maintenance work.' },
       { t: 'p', text: 'The line was returned to service after local checks were completed.' },
+      {
+        t: 'photo',
+        src: DOC_PHOTOS.nearMiss,
+        alt: 'Close-up of the safety interlock on the line guard: the door switch is covered with grey duct tape, with a red lockout hasp and a maintenance tag hanging from it.',
+        caption: 'Figure 1. Interlock on the same line during the 4 February inspection, under temporary bypass. Photo: DIN Maintenance.',
+      },
       { t: 'h', text: '3. Recommended corrective actions' },
       {
         t: 'list',
@@ -184,6 +219,11 @@ export const DOCUMENTS = {
     heading: 'Internal Audit Extract — Expediting Fee Payments',
     classification: 'CONFIDENTIAL — INTERNAL AUDIT',
     alt: 'Internal audit extract listing three expediting-fee payments to one logistics agent.',
+    keyFacts: [
+      '**Three payments** — ₦4.8m, ₦5.25m and ₦6.1m — went to one agent, Crestfield Logistics, over about fourteen months.',
+      'All were charged to the **“Expediting Fee”** budget line, and the files do not show where the money finally went.',
+      'Local management called it **“how things get done here”**; UK headquarters says it was never formally told.',
+    ],
     blocks: [
       {
         t: 'meta',
@@ -242,6 +282,11 @@ export const DOCUMENTS = {
     heading: 'Internal Correspondence',
     classification: 'CONFIDENTIAL',
     alt: 'Email from the Regional Director dated 15 May 2026.',
+    keyFacts: [
+      'Sent by the **Regional Director** on 15 May 2026 to the Managing, Operations and Finance Directors.',
+      'It tells teams to use judgement on **“temporary operating deviations and minor expediting arrangements”**.',
+      'Its key instruction: **“Just keep documentation light and focus on delivery.”**',
+    ],
     blocks: [
       {
         t: 'meta',
@@ -278,11 +323,22 @@ export const DOCUMENTS = {
     heading: 'Questions Grow After Fatal Incident at Delta Industrial Nigeria Facility',
     masthead: 'The Ogun Business Review',
     alt: 'Newspaper clipping from The Ogun Business Review, 20 June 2026.',
+    keyFacts: [
+      'The Ogun Business Review reports the **worker’s death** at DIN’s Ogun State facility.',
+      'Worker representatives say concerns about **maintenance delays and production pressure** were raised earlier.',
+      'The regulator is aware but **has not opened a formal inquiry**. The payments have not been reported.',
+    ],
     blocks: [
       {
         t: 'headline',
         text: 'Questions Grow After Fatal Incident at Delta Industrial Nigeria Facility',
         standfirst: 'Worker representatives ask whether earlier safety concerns were acted upon',
+      },
+      {
+        t: 'photo',
+        src: DOC_PHOTOS.news,
+        alt: 'Black-and-white photograph of the facility entrance: a closed steel gate and guard house in a perimeter wall, with palm trees and factory structures behind.',
+        caption: 'The DIN Ogun State Production Facility. Photo: The Ogun Business Review.',
       },
       {
         t: 'p',
@@ -312,6 +368,11 @@ export const DOCUMENTS = {
     heading: 'Signed Supervisor Statement',
     classification: 'CONFIDENTIAL',
     alt: 'Signed statement from Shift Supervisor Tunde Adebayo dated 23 June 2026.',
+    keyFacts: [
+      'Shift Supervisor **Tunde Adebayo** raised the bypass with the Regional Director after the February near miss.',
+      'The Regional Director approved it **“temporarily” — in writing**, on 12 February 2026.',
+      'The reply said: **“Understand local realities; keep documentation light.”** The decision was not the plant floor’s alone.',
+    ],
     blocks: [
       {
         t: 'meta',
@@ -356,9 +417,15 @@ export const DOCUMENTS = {
     id: 'talkingPoints',
     kind: 'memo',
     title: "MD's Draft Talking Points",
+    letterhead: true,
     heading: 'Draft — Talking Points for the Emergency Board Session',
     classification: 'CONFIDENTIAL — BOARD ONLY',
     alt: "The Managing Director's draft talking points, including the line “This is not who we are as a company.”",
+    keyFacts: [
+      'The **Managing Director’s draft** for the emergency Board session, dated 22 June.',
+      'It includes the line: **“This is not who we are as a company.”**',
+      'It treats the payments as a separate finance matter. **You are asked to confirm the framing.**',
+    ],
     blocks: [
       {
         t: 'meta',
@@ -388,9 +455,15 @@ export const DOCUMENTS = {
     id: 'briefing',
     kind: 'brief',
     title: 'Crisis Briefing Note',
+    letterhead: true,
     heading: 'Crisis Briefing Note — Company Secretariat',
     classification: 'CONFIDENTIAL — BOARD ONLY',
     alt: 'Crisis briefing note summarising what is known, stakeholders, legal considerations and the self-report decision.',
+    keyFacts: [
+      '**Known:** the interlock was bypassed, a February near miss was closed locally, and three payments went to one agent.',
+      '**Not yet known:** who authorised the bypass to continue, or where the payments ended up.',
+      '**Decision required:** whether, when and how DIN self-reports the safety failure and the payments.',
+    ],
     blocks: [
       { t: 'meta', rows: [['Date', '22 June 2026']] },
       {

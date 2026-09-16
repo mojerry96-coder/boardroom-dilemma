@@ -23,3 +23,10 @@ media/audio/
 
 # Old stand-in stills derived from the mockups (no longer used by the app)
 app/public/standins/
+
+# Logo animation source and retired stand-ins (the app ships the converted copies)
+media/*.mov
+media/unused_standins/
+
+# Layout mockups from the replacement bundle
+boardroom_dilemma_exact_replacement_bundle/

@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FILM_IMAGES } from '../assets';
+import { FILM_IMAGES, type FilmSource } from '../assets';
+import { isConstrainedNetwork, markSlowNetwork } from '../media';
+import { useFilmMusicPause } from '../sound';
 import type { FilmCue } from '../sim/content';
-import { useNarration } from './Narration';
 import { CaptionsIcon, PauseIcon, PlayIcon, SkipIcon, VolumeIcon } from './Icons';
+import { LogoSting } from './LogoSting';
+import { useNarration } from './Narration';
 
 // Full-screen film player. Plays the final video when a source exists; otherwise it
 // plays a timed storyboard of stills and captions. Always pausable, captioned and skippable.
@@ -11,9 +14,11 @@ import { CaptionsIcon, PauseIcon, PlayIcon, SkipIcon, VolumeIcon } from './Icons
 interface FilmPlayerProps {
   title: string;
   cues: FilmCue[];
-  video?: { src: string; captions: string } | null;
+  video?: FilmSource | null;
   onEnd: () => void;
   skipLabel?: string;
+  /** Seconds of animated countdown while the film loads, before playback starts. */
+  countdown?: number;
 }
 
 interface LiveCue {
@@ -26,10 +31,41 @@ const parseCue = (raw: string): LiveCue => {
   return m ? { speaker: m[1], text: m[2] } : { text: raw };
 };
 
-export function FilmPlayer({ title, cues, video, onEnd, skipLabel = 'Skip' }: FilmPlayerProps) {
+export function FilmPlayer({ title, cues, video, onEnd, skipLabel = 'Skip', countdown = 0 }: FilmPlayerProps) {
+  const [count, setCount] = useState(countdown);
+  const [canPlay, setCanPlay] = useState(!video);
+  const [waitedTooLong, setWaitedTooLong] = useState(false);
+  useFilmMusicPause();
+  // 720p by default; the 480p rendition on slow connections or once the 720p film has struggled.
+  const [useLow, setUseLow] = useState(isConstrainedNetwork);
+  const src = video ? (useLow && video.low ? video.low : video.src) : undefined;
+  const counting = count > 0 || (!canPlay && !waitedTooLong);
+
+  useEffect(() => {
+    if (count <= 0) return;
+    const id = window.setTimeout(() => setCount((c) => c - 1), 1000);
+    return () => window.clearTimeout(id);
+  }, [count]);
+
+  // Never hold a player on the loader forever. A film slow to buffer switches to the lighter rendition first
+  // (remembered for the session), then starts anyway.
+  useEffect(() => {
+    if (count > 0 || canPlay) return;
+    const id = window.setTimeout(() => {
+      if (video?.low && !useLow) {
+        markSlowNetwork();
+        setUseLow(true);
+      } else {
+        setWaitedTooLong(true);
+      }
+    }, 5000);
+    return () => window.clearTimeout(id);
+  }, [count, canPlay, useLow, video]);
   const duration = cues.length ? cues[cues.length - 1].until : 0;
   const [elapsed, setElapsed] = useState(0);
   const [playing, setPlaying] = useState(true);
+  /** The browser refused to start playback on its own (e.g. Safari after the countdown). */
+  const [blocked, setBlocked] = useState(false);
   const [videoCue, setVideoCue] = useState<LiveCue | null>(null);
   const [videoProgress, setVideoProgress] = useState(0);
   const { captions, setCaptions, audio, setAudio, speakOnly } = useNarration();
@@ -38,6 +74,20 @@ export function FilmPlayer({ title, cues, video, onEnd, skipLabel = 'Skip' }: Fi
   const spoken = useRef<number>(-1);
   const dialogRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const stallTimer = useRef<number | undefined>(undefined);
+  const resumeAt = useRef<number | null>(null);
+
+  // Mid-film, a stall of three seconds on 720p switches to 480p and carries on from the same moment.
+  const onStall = () => {
+    window.clearTimeout(stallTimer.current);
+    if (!video?.low || useLow) return;
+    stallTimer.current = window.setTimeout(() => {
+      resumeAt.current = videoRef.current?.currentTime ?? 0;
+      markSlowNetwork();
+      setUseLow(true);
+    }, 3000);
+  };
+  useEffect(() => () => window.clearTimeout(stallTimer.current), []);
 
   const finish = useCallback(() => {
     if (ended.current) return;
@@ -52,11 +102,19 @@ export function FilmPlayer({ title, cues, video, onEnd, skipLabel = 'Skip' }: Fi
   }, []);
 
   // Video: start playback (show Play if the browser blocks autoplay) and read caption cues.
-  const videoSrc = video?.src;
+  const videoSrc = src;
+  useEffect(() => {
+    if (!videoSrc || counting) return;
+    videoRef.current?.play().catch(() => {
+      setPlaying(false);
+      setBlocked(true);
+    });
+  }, [videoSrc, counting]);
+
   useEffect(() => {
     const v = videoRef.current;
     if (!videoSrc || !v) return;
-    v.play().catch(() => setPlaying(false));
+    if (v.readyState >= 3) setCanPlay(true);
     const track = v.textTracks[0];
     if (!track) return;
     track.mode = 'hidden';
@@ -74,7 +132,7 @@ export function FilmPlayer({ title, cues, video, onEnd, skipLabel = 'Skip' }: Fi
 
   // Storyboard clock
   useEffect(() => {
-    if (video || !playing) {
+    if (video || !playing || counting) {
       last.current = null;
       return;
     }
@@ -95,7 +153,7 @@ export function FilmPlayer({ title, cues, video, onEnd, skipLabel = 'Skip' }: Fi
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [playing, duration, finish, video]);
+  }, [playing, duration, finish, video, counting]);
 
   const index = Math.max(
     0,
@@ -142,12 +200,24 @@ export function FilmPlayer({ title, cues, video, onEnd, skipLabel = 'Skip' }: Fi
         <video
           ref={videoRef}
           className="film__video"
-          src={video.src}
+          src={src}
+          poster={video.poster}
+          onWaiting={onStall}
+          onPlaying={() => window.clearTimeout(stallTimer.current)}
+          onLoadedMetadata={(e) => {
+            if (resumeAt.current === null) return;
+            e.currentTarget.currentTime = resumeAt.current;
+            resumeAt.current = null;
+          }}
           playsInline
           preload="auto"
+          onCanPlayThrough={() => setCanPlay(true)}
           onEnded={finish}
           onPause={() => setPlaying(false)}
-          onPlay={() => setPlaying(true)}
+          onPlay={() => {
+            setPlaying(true);
+            setBlocked(false);
+          }}
           onTimeUpdate={(e) => setVideoProgress(e.currentTarget.currentTime / (e.currentTarget.duration || 1))}
         >
           <track kind="captions" src={video.captions} srcLang="en" label="English" />
@@ -175,6 +245,34 @@ export function FilmPlayer({ title, cues, video, onEnd, skipLabel = 'Skip' }: Fi
         {live ? `${live.speaker ? `${live.speaker}: ` : ''}${live.text}` : ''}
       </p>
 
+      {blocked && !counting && (
+        <button type="button" className="film__start" onClick={toggle} autoFocus>
+          <PlayIcon />
+          <span>Play the film</span>
+        </button>
+      )}
+
+      {counting && (
+        <div className="film-countdown" aria-live="polite">
+          <LogoSting className="film-countdown__sting" />
+          <p className="film-countdown__title">{title}</p>
+          <div className="film-countdown__ring">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle className="film-countdown__track" cx="60" cy="60" r="52" />
+              <circle key={count} className={`film-countdown__arc${count > 0 ? ' is-counting' : ' is-loading'}`} cx="60" cy="60" r="52" />
+            </svg>
+            {count > 0 ? (
+              <span key={count} className="film-countdown__num">
+                {count}
+              </span>
+            ) : (
+              <span className="film-countdown__loading">Loading</span>
+            )}
+          </div>
+          <p className="film-countdown__hint">Captions, pause and skip are available while the film plays.</p>
+        </div>
+      )}
+
       <div className="film__controls">
         <button type="button" className="icon-btn icon-btn--solid" onClick={toggle} aria-label={playing ? 'Pause' : 'Play'}>
           {playing ? <PauseIcon /> : <PlayIcon />}
@@ -190,7 +288,7 @@ export function FilmPlayer({ title, cues, video, onEnd, skipLabel = 'Skip' }: Fi
         </button>
         <button type="button" className="btn btn--ghost btn--small" onClick={finish}>
           {skipLabel}
-          <SkipIcon width={16} height={16} />
+          <SkipIcon size={16} />
         </button>
       </div>
     </div>

@@ -1,36 +1,74 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
-import { SCENES } from '../assets';
-import { ChoicePicker, OutcomeCard } from '../components/Choices';
-import { ContextView, DockHeader, Prompt } from '../components/Dock';
-import { DocumentDialog, TableDocument } from '../components/Documents';
-import { DocIcon } from '../components/Icons';
-import { useNarrateOnce } from '../components/Narration';
-import { Stage } from '../components/Stage';
+import { useState } from 'react';
+import { Check } from '@phosphor-icons/react';
+import { SCENES, TABLE_SHEETS } from '../assets';
+import { DocumentDialog, TableArtifact } from '../components/Documents';
+import { usePageIntro } from '../components/Experience';
+import { Reveal, revealTiming } from '../components/Reveal';
+import { OBJECTIVES } from '../sim/experience';
+import { RadioPanel } from '../components/RadioPanel';
+import { SimulationStage } from '../components/SimulationStage';
+import { PillButton, StageCopy, TextLink } from '../components/ui';
 import { FRAMING, NARRATION, PAGE_META, SELF_REPORT, UI } from '../sim/content';
 import { DOCUMENTS } from '../sim/documents';
 import { useSim } from '../sim/store';
 
-// Screens 2 and 3 — each decision emerges from a document on the table.
+// Page 04 — Crisis Decision (spec §15). Each decision is revealed by inspecting a document:
+// talking points → Board Position → briefing note → Disclosure Approach → Continue.
 
 type DocKey = 'talkingPoints' | 'briefing';
+const SUBTITLE = 'Set the tone before the emergency meeting.';
+
+function DecisionSummary({ title, chosen, consequence, feedback, expanded }: { title: string; chosen: string; consequence: string; feedback: string; expanded: boolean }) {
+  const [why, setWhy] = useState(false);
+  return (
+    <div className="page04__panel glass-panel--dark">
+      <div className="page04__chosen">
+        <h2 className="panel-title">{title}</h2>
+        <p className="outcome__chosen">
+          <Check size={15} />
+          {chosen}
+        </p>
+      </div>
+      {expanded && (
+        <>
+          <div aria-live="polite">{why ? <p className="page04__why">{feedback}</p> : <p className="page04__consequence">{consequence}</p>}</div>
+          <div className="panel-actions">
+            <TextLink aria-pressed={why} onClick={() => setWhy((w) => !w)}>
+              {why ? 'Back to the outcome' : 'Why it matters'}
+            </TextLink>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function StepLine({ kicker, children }: { kicker: string; children: string }) {
+  return (
+    <p className="step-line" aria-live="polite">
+      <span className="step-line__kicker">{kicker}</span>
+      {children}
+    </p>
+  );
+}
 
 export function Page04Crisis() {
   const { sim, dispatch } = useSim();
+  const framing = sim.boardFraming;
+  const selfReport = sim.selfReportDecision;
   const [open, setOpen] = useState<DocKey | null>(null);
-  const [talkingPointsRead, setTalkingPointsRead] = useState(sim.boardFraming !== null);
-  const [briefingRead, setBriefingRead] = useState(sim.selfReportDecision !== null);
-  const [step, setStep] = useState<1 | 2>(sim.selfReportDecision !== null ? 2 : 1);
-  const [hint, setHint] = useState<string | null>(null);
-  const [ctx, setCtx] = useState(false);
-  useNarrateOnce('crisis-load', NARRATION.crisisLoad);
+  const [talkingPointsRead, setTalkingPointsRead] = useState(framing !== null);
+  const [briefingRead, setBriefingRead] = useState(selfReport !== null);
+  const [hint, setHint] = useState(false);
+  const intro = usePageIntro('crisis', NARRATION.crisisLoad, !framing);
+  const timing = revealTiming(PAGE_META[4].title, SUBTITLE, OBJECTIVES[4]);
 
   const openDoc = (key: DocKey) => {
-    setCtx(false);
-    if (key === 'briefing' && step === 1) {
-      setHint(UI.framingFirst);
+    if (key === 'briefing' && !framing) {
+      setHint(true);
       return;
     }
-    setHint(null);
+    setHint(false);
     setOpen(key);
   };
 
@@ -38,124 +76,100 @@ export function Page04Crisis() {
     if (open === 'talkingPoints') setTalkingPointsRead(true);
     if (open === 'briefing') setBriefingRead(true);
     setOpen(null);
+    window.setTimeout(() => document.querySelector<HTMLElement>('.page04__question-stack button, .page04__question-stack .primary-pill')?.focus(), 80);
   };
-
-  const framing = sim.boardFraming;
-  const selfReport = sim.selfReportDecision;
-  const done = step === 1 ? 0 : selfReport ? 2 : 1;
-
-  let body: ReactNode;
-  if (ctx) {
-    body = (
-      <ContextView onBack={() => setCtx(false)}>
-        <p>{step === 1 ? UI.framingSituation : UI.selfReportSituation}</p>
-      </ContextView>
-    );
-  } else if (step === 1) {
-    if (!talkingPointsRead) {
-      body = (
-        <>
-          <Prompt step="Decision 1 of 2 · Board framing">{UI.framingOpen}</Prompt>
-          <div className="row">
-            <button type="button" className="btn btn--quiet btn--small" onClick={() => openDoc('talkingPoints')}>
-              <DocIcon width={16} height={16} />
-              Open talking points
-            </button>
-          </div>
-        </>
-      );
-    } else if (!framing) {
-      body = (
-        <ChoicePicker
-          prompt={UI.framingPrompt}
-          labels={FRAMING.short}
-          options={FRAMING.options}
-          seed={sim.seed}
-          shuffleKey="framing"
-          confirmLabel="Confirm framing"
-          onConfirm={(opt) => dispatch({ type: 'CHOOSE_FRAMING', opt })}
-        />
-      );
-    } else {
-      body = (
-        <OutcomeCard
-          chosen={FRAMING.short[framing]}
-          text={FRAMING.consequence[framing]}
-          feedback={FRAMING.feedback[framing]}
-          continueLabel="Next decision"
-          onContinue={() => {
-            setStep(2);
-            setHint(null);
-          }}
-        />
-      );
-    }
-  } else if (!briefingRead) {
-    body = (
-      <>
-        <Prompt step="Decision 2 of 2 · Self-report">{UI.selfReportOpen}</Prompt>
-        <div className="row">
-          <button type="button" className="btn btn--quiet btn--small" onClick={() => openDoc('briefing')}>
-            <DocIcon width={16} height={16} />
-            Open briefing note
-          </button>
-        </div>
-      </>
-    );
-  } else if (!selfReport) {
-    body = (
-      <ChoicePicker
-        prompt={UI.selfReportPrompt}
-        labels={SELF_REPORT.short}
-        options={SELF_REPORT.options}
-        seed={sim.seed}
-        shuffleKey="selfReport"
-        confirmLabel="Confirm decision"
-        onConfirm={(opt) => dispatch({ type: 'CHOOSE_SELF_REPORT', opt })}
-      />
-    );
-  } else {
-    body = (
-      <OutcomeCard
-        chosen={SELF_REPORT.short[selfReport]}
-        text={SELF_REPORT.consequence[selfReport]}
-        feedback={SELF_REPORT.feedback[selfReport]}
-        onContinue={() => dispatch({ type: 'GO', page: 5 })}
-      />
-    );
-  }
-
-  const overlay = (
-    <div className="docs-on-table">
-      <TableDocument
-        title="MD's Draft Talking Points"
-        kicker="Open"
-        state={talkingPointsRead ? 'reviewed' : 'active'}
-        onOpen={() => openDoc('talkingPoints')}
-      />
-      <span style={{ '--rot': '4deg' } as CSSProperties}>
-        <TableDocument
-          title="Crisis Briefing Note"
-          kicker={step === 1 ? 'After framing' : 'Open'}
-          state={step === 1 ? 'locked' : briefingRead ? 'reviewed' : 'active'}
-          onOpen={() => openDoc('briefing')}
-        />
-      </span>
-    </div>
-  );
 
   return (
     <>
-      <Stage
-        image={SCENES.crisis}
-        label="Crisis decision"
-        overlay={overlay}
-        chapter={{ title: PAGE_META[4].title, subtitle: PAGE_META[4].subtitle }}
-      >
-        <DockHeader page={4} title={PAGE_META[4].title} steps={2} current={done} onContext={() => setCtx((c) => !c)} contextOpen={ctx} />
-        {hint && !ctx && <Prompt tone="warn">{hint}</Prompt>}
-        {body}
-      </Stage>
+      <SimulationStage page={4} image={SCENES.crisis} label="Crisis Decision" wash="strong" intro={intro}>
+        <StageCopy className="page04__copy" title={PAGE_META[4].title} subtitle={SUBTITLE} objective={OBJECTIVES[4]} intro={intro}>
+          <div className="page04__question-stack" id="controls">
+            {!talkingPointsRead ? (
+              <StepLine kicker="Decision 1 of 2 · Board Position">{UI.framingOpen}</StepLine>
+            ) : !framing ? (
+              <RadioPanel
+                title="Board Position"
+                titles={FRAMING.short}
+                texts={FRAMING.options}
+                seed={sim.seed}
+                shuffleKey="framing"
+                confirmLabel="Confirm position"
+                onConfirm={(opt) => dispatch({ type: 'CHOOSE_FRAMING', opt })}
+              />
+            ) : (
+              <DecisionSummary
+                title="Board Position"
+                chosen={FRAMING.short[framing]}
+                consequence={FRAMING.consequence[framing]}
+                feedback={FRAMING.feedback[framing]}
+                expanded={!briefingRead}
+              />
+            )}
+
+            {framing &&
+              (!briefingRead ? (
+                <StepLine kicker="Decision 2 of 2 · Disclosure Approach">{UI.selfReportOpen}</StepLine>
+              ) : !selfReport ? (
+                <RadioPanel
+                  title="Disclosure Approach"
+                  texts={SELF_REPORT.options}
+                  seed={sim.seed}
+                  shuffleKey="selfReport"
+                  confirmLabel="Confirm approach"
+                  onConfirm={(opt) => dispatch({ type: 'CHOOSE_SELF_REPORT', opt })}
+                />
+              ) : (
+                <DecisionSummary
+                  title="Disclosure Approach"
+                  chosen={SELF_REPORT.short[selfReport]}
+                  consequence={SELF_REPORT.consequence[selfReport]}
+                  feedback={SELF_REPORT.feedback[selfReport]}
+                  expanded
+                />
+              ))}
+
+            {hint && (
+              <p className="stage-note stage-note--warn" role="alert">
+                {UI.framingFirst}
+              </p>
+            )}
+
+            {selfReport && (
+              <div>
+                <PillButton onClick={() => dispatch({ type: 'GO', page: 5 })}>Continue</PillButton>
+              </div>
+            )}
+          </div>
+        </StageCopy>
+
+        <Reveal show={intro.ready} animate={intro.animate} delay={timing.controlsAt + 200} className="page04__docs">
+          <TableArtifact
+            className="page04__doc--statement"
+            photo={TABLE_SHEETS.talkingPoints}
+            title={DOCUMENTS.talkingPoints.title}
+            label={`Open ${DOCUMENTS.talkingPoints.title}`}
+            stamp="DRAFT"
+            folio
+            rotate={-2}
+            reviewed={talkingPointsRead}
+            glow={!talkingPointsRead}
+            onOpen={() => openDoc('talkingPoints')}
+          />
+          <TableArtifact
+            className="page04__doc--briefing"
+            photo={TABLE_SHEETS.briefing}
+            folio
+            title={DOCUMENTS.briefing.title}
+            label={`Open ${DOCUMENTS.briefing.title}`}
+            stamp="CONFIDENTIAL"
+            rotate={4}
+            disabled={!framing}
+            reviewed={briefingRead}
+            glow={!!framing && !briefingRead}
+            onOpen={() => openDoc('briefing')}
+          />
+        </Reveal>
+      </SimulationStage>
       <DocumentDialog doc={open ? DOCUMENTS[open] : null} onClose={close} />
     </>
   );

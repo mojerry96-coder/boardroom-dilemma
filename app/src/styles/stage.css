@@ -1,0 +1,149 @@
+/* Shared stage — spec §6. One shell for all ten pages. */
+
+.sim-stage {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  min-height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+  background: #0f1824;
+  color: var(--white);
+  font-family: var(--font-ui);
+}
+.sim-stage__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  z-index: -3;
+  user-select: none;
+  pointer-events: none;
+  animation: stage-push 14s ease-out both;
+}
+@keyframes stage-push {
+  from {
+    transform: scale(1.03);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+.sim-stage__wash {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(8, 22, 39, 0.48) 0%, rgba(8, 22, 39, 0.22) 25%, rgba(8, 22, 39, 0) 52%),
+    linear-gradient(180deg, rgba(8, 22, 39, 0.28) 0%, rgba(8, 22, 39, 0) 14%);
+}
+.sim-stage__wash--strong {
+  background:
+    linear-gradient(90deg, rgba(8, 22, 39, 0.62) 0%, rgba(8, 22, 39, 0.34) 32%, rgba(8, 22, 39, 0) 58%),
+    linear-gradient(180deg, rgba(8, 22, 39, 0.3) 0%, rgba(8, 22, 39, 0) 16%);
+}
+.sim-stage__content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: var(--stage-pad-top) var(--stage-pad-x) var(--stage-pad-bottom);
+}
+.sim-stage__top-right {
+  position: absolute;
+  z-index: 20;
+  top: calc(var(--stage-pad-top) - 12px);
+  right: calc(var(--stage-pad-x) - 8px);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sim-stage__audio {
+  display: flex;
+  gap: 2px;
+  margin-right: 10px;
+}
+.sim-stage__audio .icon-btn {
+  width: 36px;
+  height: 36px;
+}
+.sim-stage__progress {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding-right: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.95);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-shadow: 0 1px 12px rgba(5, 14, 25, 0.45);
+}
+.sim-stage__track {
+  position: relative;
+  display: block;
+  width: 136px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.32);
+}
+.sim-stage__progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 2px;
+  background: #fff;
+  transition: width 0.42s var(--ease-out);
+}
+
+/* Title block */
+.stage-copy {
+  position: absolute;
+  z-index: 10;
+  left: var(--stage-pad-x);
+  top: 10.4vh;
+  width: min(760px, 47vw);
+  animation: fade-up 0.42s var(--ease-out) both;
+}
+.stage-eyebrow {
+  display: block;
+  margin: 0 0 14px;
+  font-size: var(--eyebrow-size);
+  letter-spacing: 0.26em;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 12px rgba(5, 14, 25, 0.45);
+}
+.stage-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--title-size);
+  letter-spacing: -0.035em;
+  line-height: 0.96;
+  color: var(--white);
+  text-wrap: balance;
+  margin: 0;
+  text-shadow: 0 2px 26px rgba(5, 14, 25, 0.38);
+}
+.stage-title:focus {
+  outline: none;
+}
+.stage-subtitle {
+  font-family: var(--font-ui);
+  font-size: var(--subtitle-size);
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.93);
+  margin: 12px 0 0;
+  text-shadow: 0 1px 16px rgba(5, 14, 25, 0.5);
+}
+.stage-actions {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}

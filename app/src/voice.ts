@@ -10,6 +10,7 @@ import {
   STAKEHOLDERS,
 } from './sim/content';
 import { fill, leverList } from './sim/derive';
+import { BRIEFING, CHAPTERS, GUIDE } from './sim/experience';
 import { LEVERS, type Lever } from './sim/types';
 
 // Recorded voice lines (ElevenLabs), mapped by exact text. Files live in public/voice.
@@ -24,21 +25,29 @@ const clip = (file: string) => `${base}voice/${file}.mp3`;
 const NARRATOR: [string, string][] = [
   [NARRATION.role, 'narr_role'],
   [NARRATION.evidenceLoad, 'narr_evidence_load'],
-  [NARRATION.evidencePattern, 'narr_evidence_pattern'],
   [NARRATION.crisisLoad, 'narr_crisis_load'],
   [NARRATION.accountabilityLoad, 'narr_accountability_load'],
-  [NARRATION.accountabilityNewEvidence, 'narr_accountability_new_evidence'],
-  [NARRATION.accountabilityReassess, 'narr_accountability_reassess'],
   [NARRATION.stakeholdersLoad, 'narr_stakeholders_load'],
   [NARRATION.executiveLoad, 'narr_executive_load'],
   [NARRATION.boardCaseLoad, 'narr_board_case_load'],
-  [NARRATION.boardCaseReform, 'narr_board_case_reform'],
-  [NARRATION.boardQALoad, 'narr_board_qa_load'],
+  // After-action guidance, in full sentences (sim/experience.ts).
+  [GUIDE.evidencePattern, 'guide_evidence_pattern'],
+  [GUIDE.newEvidence, 'guide_new_evidence'],
+  [GUIDE.reassess, 'guide_reassess'],
+  [GUIDE.caseReform, 'guide_case_reform'],
+  ...GUIDE.caseAdded.map((line, i): [string, string] => [line, `guide_case_added_${i + 1}`]),
+  [GUIDE.caseAddedMismatch, 'guide_case_added_4_mismatch'],
+  [GUIDE.caseLocked, 'guide_case_locked'],
+  [GUIDE.qaLoad, 'guide_qa_load'],
+  ...GUIDE.qaAnswered.map((line, i): [string, string] => [line, `guide_qa_answered_${i + 1}`]),
   [EXECUTIVE.bridge.A, 'bridge_a'],
   [EXECUTIVE.bridge.B, 'bridge_b'],
   [EXECUTIVE.bridge.C, 'bridge_c'],
   [EXECUTIVE.bridge.D, 'bridge_d'],
   ...Object.entries(ENDINGS).map(([id, e]): [string, string] => [e.narration, `ending_${id}`]),
+  ...Object.entries(CHAPTERS).map(([page, c]): [string, string] => [c.bridge, `chapter_${page}`]),
+  [BRIEFING.narrationFacts, 'brief_facts'],
+  [BRIEFING.narrationMission, 'brief_mission'],
 ];
 
 // Board follow-ups are filled from the learner's diagnosis, so every reachable variant is recorded.
@@ -71,3 +80,12 @@ const VOICE = new Map(VOICE_LINES.map(([text, file]) => [text, clip(file)]));
 
 /** URL of the recorded voice for an exact line, if one exists. */
 export const voiceFor = (text: string): string | undefined => VOICE.get(text);
+
+const opusSupported = typeof Audio !== 'undefined' && new Audio().canPlayType('audio/webm; codecs="opus"') !== '';
+
+/** Recordings for a line, best first: Opus (a third of the size, same speech quality) where supported, then MP3. */
+export function voiceSourcesFor(text: string): string[] {
+  const mp3 = VOICE.get(text);
+  if (!mp3) return [];
+  return opusSupported ? [mp3.replace(/\.mp3$/, '.webm'), mp3] : [mp3];
+}

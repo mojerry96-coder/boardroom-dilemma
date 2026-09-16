@@ -10,6 +10,7 @@ interface AllocationSlidersProps {
   compareTo?: Allocation | null;
 }
 
+/** Three responsibility sliders that always total 100% (spec §16 slider rows). */
 export function AllocationSliders({ value, onChange, disabled, compareTo }: AllocationSlidersProps) {
   return (
     <div className="sliders">
@@ -17,14 +18,14 @@ export function AllocationSliders({ value, onChange, disabled, compareTo }: Allo
         const copy = LEVER_COPY[lever];
         const id = `lever-${lever}`;
         return (
-          <div className="slider" key={lever}>
-            <div className="slider__head">
-              <label htmlFor={id} className="slider__label">
+          <div className="slider-row" key={lever}>
+            <div className="slider-row__header">
+              <label htmlFor={id} title={copy.subtitle}>
                 {copy.label}
               </label>
-              <output htmlFor={id} className="slider__value">
+              <output htmlFor={id} className="slider-row__value">
+                {compareTo && compareTo[lever] !== value[lever] && <span className="slider-row__was">was {compareTo[lever]}% · </span>}
                 {value[lever]}%
-                {compareTo && compareTo[lever] !== value[lever] && <span className="slider__was"> was {compareTo[lever]}</span>}
               </output>
             </div>
             <input
@@ -46,7 +47,7 @@ export function AllocationSliders({ value, onChange, disabled, compareTo }: Allo
   );
 }
 
-/** Live Governance Risk Index and Reform Credibility Score, as two compact readouts. */
+/** Live Governance Risk Index and Reform Credibility Score. */
 export function Readouts({ gri, rcs }: { gri: number; rcs: number }) {
   const griTone = gri < 40 ? 'good' : gri < 65 ? 'mid' : 'bad';
   const rcsTone = rcs >= 70 ? 'good' : rcs >= 45 ? 'mid' : 'bad';

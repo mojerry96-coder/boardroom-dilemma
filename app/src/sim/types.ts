@@ -23,6 +23,8 @@ export interface LogEntry {
 }
 
 export interface BoardCase {
+  /** Evidence items the learner chose to include in the Board pack (replacement spec §19). */
+  selectedEvidence: EvidenceId[];
   recommendation: string | null;
   lenses: LensId[];
   justifications: Partial<Record<LensId, string>>;

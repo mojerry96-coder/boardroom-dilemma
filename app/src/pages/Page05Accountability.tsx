@@ -1,21 +1,21 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
+import { FileText } from '@phosphor-icons/react';
 import { SCENES } from '../assets';
 import { AllocationSliders, Readouts } from '../components/Allocation';
-import { OutcomeCard } from '../components/Choices';
-import { ContextView, DockHeader, MediaNotice, Prompt } from '../components/Dock';
-import { DocumentDialog, TableDocument } from '../components/Documents';
-import { ArrowIcon } from '../components/Icons';
-import { useNarrateOnce, useNarration } from '../components/Narration';
-import { Stage } from '../components/Stage';
+import { DocumentDialog, TableArtifact } from '../components/Documents';
+import { usePageIntro } from '../components/Experience';
+import { useNarration } from '../components/Narration';
+import { GUIDE, OBJECTIVES } from '../sim/experience';
+import { SimulationStage } from '../components/SimulationStage';
+import { OutcomePanel, PillButton, StageCopy } from '../components/ui';
 import { START_ALLOCATION, governanceRiskIndex, isSingleCause, redistribute, reformCredibilityScore } from '../sim/accountability';
-import { ACCOUNTABILITY_COPY, LEVER_COPY, NARRATION, PAGE_META, UI } from '../sim/content';
+import { ACCOUNTABILITY_COPY, BRAND, NARRATION, PAGE_META } from '../sim/content';
 import { round2Message } from '../sim/derive';
 import { DOCUMENTS } from '../sim/documents';
 import { useSim } from '../sim/store';
-import { LEVERS, type Allocation } from '../sim/types';
+import type { Allocation } from '../sim/types';
 
-// Screen 4 — two-round systems model. Sliders and readouts only appear while allocating;
-// the single-cause warning appears on the media only while it applies.
+// Page 05 — Accountability Diagnosis (spec §16): Round 1 → new evidence on the table → Round 2.
 
 export function Page05Accountability() {
   const { sim, dispatch } = useSim();
@@ -24,135 +24,107 @@ export function Page05Accountability() {
   const [alloc1, setAlloc1] = useState<Allocation>(acc.round1 ?? START_ALLOCATION);
   const [alloc2, setAlloc2] = useState<Allocation>(acc.round2 ?? acc.round1 ?? START_ALLOCATION);
   const [open, setOpen] = useState(false);
-  const [ctx, setCtx] = useState(false);
 
   const phase = !acc.round1 ? 'r1' : !acc.statementRead ? 'evidence' : !acc.round2 ? 'r2' : 'done';
-  useNarrateOnce('accountability-load', NARRATION.accountabilityLoad, phase === 'r1');
+  const intro = usePageIntro('accountability', NARRATION.accountabilityLoad, phase === 'r1');
 
   const round: 1 | 2 = phase === 'r1' || phase === 'evidence' ? 1 : 2;
-  const allocating = phase === 'r1' || phase === 'r2';
   const shown: Allocation = phase === 'r1' ? alloc1 : alloc2;
   const gri = governanceRiskIndex(shown, round);
   const rcs = reformCredibilityScore(shown, round, round === 2 ? acc.round1 : null);
+  const allocating = phase === 'r1' || phase === 'r2';
   const single = allocating && isSingleCause(shown);
 
   const lockRound1 = () => {
     dispatch({ type: 'LOCK_ROUND1', allocation: alloc1 });
     setAlloc2(alloc1);
-    say(NARRATION.accountabilityNewEvidence);
+    say(GUIDE.newEvidence);
   };
 
   const closeStatement = () => {
     setOpen(false);
     if (!acc.statementRead) {
       dispatch({ type: 'STATEMENT_READ' });
-      say(NARRATION.accountabilityReassess);
+      say(GUIDE.reassess);
     }
+    window.setTimeout(() => document.querySelector<HTMLElement>('#lever-agency')?.focus(), 80);
   };
-
-  let body: ReactNode;
-  if (ctx) {
-    body = (
-      <ContextView
-        onBack={() => setCtx(false)}
-        pages={[
-          <>
-            <p>{round === 1 ? ACCOUNTABILITY_COPY.round1Situation : ACCOUNTABILITY_COPY.round2Situation}</p>
-            {acc.statementRead && (
-              <div className="row">
-                <button
-                  type="button"
-                  className="btn btn--quiet btn--small"
-                  onClick={() => {
-                    setCtx(false);
-                    setOpen(true);
-                  }}
-                >
-                  Re-read the statement
-                </button>
-              </div>
-            )}
-          </>,
-          <>
-            <ul className="context-list">
-              {LEVERS.map((l) => (
-                <li key={l}>
-                  <b>{LEVER_COPY[l].label}</b> — {LEVER_COPY[l].subtitle}
-                </li>
-              ))}
-            </ul>
-            <p>{UI.accScoresHelp}</p>
-          </>,
-        ]}
-      />
-    );
-  } else if (phase === 'evidence') {
-    body = (
-      <>
-        <Prompt tone="accent">{UI.accEvidence}</Prompt>
-        <button type="button" className="btn btn--primary" onClick={() => setOpen(true)} autoFocus>
-          {ACCOUNTABILITY_COPY.openStatement}
-          <ArrowIcon />
-        </button>
-      </>
-    );
-  } else if (phase === 'done' && acc.round1 && acc.round2) {
-    body = (
-      <OutcomeCard
-        text={round2Message(acc.round1, acc.round2)}
-        feedback={ACCOUNTABILITY_COPY.feedback}
-        onContinue={() => dispatch({ type: 'GO', page: 6 })}
-      />
-    );
-  } else {
-    body = (
-      <>
-        <Prompt>{round === 1 ? UI.accRound1 : UI.accRound2}</Prompt>
-        <AllocationSliders
-          value={shown}
-          compareTo={round === 2 ? acc.round1 : null}
-          onChange={(lever, v) => (phase === 'r1' ? setAlloc1((a) => redistribute(a, lever, v)) : setAlloc2((a) => redistribute(a, lever, v)))}
-        />
-        <Readouts gri={gri} rcs={rcs} />
-        {phase === 'r1' ? (
-          <button type="button" className="btn btn--primary" onClick={lockRound1}>
-            {ACCOUNTABILITY_COPY.lockRound1}
-          </button>
-        ) : (
-          <button type="button" className="btn btn--primary" onClick={() => dispatch({ type: 'SUBMIT_ROUND2', allocation: alloc2 })}>
-            {ACCOUNTABILITY_COPY.submitRound2}
-          </button>
-        )}
-      </>
-    );
-  }
-
-  const overlay =
-    phase !== 'r1' ? (
-      <div className="docs-on-table">
-        <TableDocument
-          title="Supervisor Statement"
-          kicker={acc.statementRead ? 'Re-read' : 'New evidence — open'}
-          state={acc.statementRead ? 'reviewed' : 'active'}
-          onOpen={() => setOpen(true)}
-        />
-      </div>
-    ) : undefined;
-
-  const stepsDone = phase === 'r1' ? 0 : phase === 'done' ? 2 : 1;
 
   return (
     <>
-      <Stage
-        image={SCENES.accountability}
-        label="Accountability diagnosis"
-        overlay={overlay}
-        quote={single && !ctx ? <MediaNotice text={ACCOUNTABILITY_COPY.singleCause} /> : undefined}
-        chapter={{ title: PAGE_META[5].title, subtitle: PAGE_META[5].subtitle }}
-      >
-        <DockHeader page={5} title="Accountability" steps={2} current={stepsDone} onContext={() => setCtx((c) => !c)} contextOpen={ctx} />
-        {body}
-      </Stage>
+      <SimulationStage page={5} image={SCENES.accountability} label="Accountability Diagnosis" wash="strong" intro={intro}>
+        <StageCopy
+          className="page05__copy"
+          eyebrow={BRAND.eyebrow}
+          title={PAGE_META[5].title}
+          subtitle={PAGE_META[5].subtitle}
+          objective={OBJECTIVES[5]}
+          intro={intro}
+        >
+          <div className="page05__controls" id="controls">
+            {phase === 'done' && acc.round1 && acc.round2 ? (
+              <OutcomePanel
+                className="page05__outcome"
+                text={round2Message(acc.round1, acc.round2)}
+                feedback={ACCOUNTABILITY_COPY.feedback}
+                onContinue={() => dispatch({ type: 'GO', page: 6 })}
+              />
+            ) : (
+              <>
+                <div className={`page05__sliders${phase === 'evidence' ? ' is-muted' : ''}`}>
+                  <p className="page05__round">{round === 1 ? 'Round 1 · Weigh where responsibility lies' : 'Round 2 · Does the new evidence change your weighting?'}</p>
+                  <AllocationSliders
+                    value={shown}
+                    disabled={!allocating}
+                    compareTo={round === 2 ? acc.round1 : null}
+                    onChange={(lever, v) => (phase === 'r1' ? setAlloc1((a) => redistribute(a, lever, v)) : setAlloc2((a) => redistribute(a, lever, v)))}
+                  />
+                  <Readouts gri={gri} rcs={rcs} />
+                  {single && (
+                    <p className="page05__single" role="status">
+                      {ACCOUNTABILITY_COPY.singleCause}
+                    </p>
+                  )}
+                </div>
+
+                {phase !== 'r1' && (
+                  <button type="button" className={`page05__evidence-alert${acc.statementRead ? ' is-read' : ''}`} onClick={() => setOpen(true)}>
+                    <span className="page05__alert-icon" aria-hidden="true">
+                      <FileText size={22} />
+                    </span>
+                    <span className="page05__alert-text">
+                      {ACCOUNTABILITY_COPY.newEvidenceTitle} —<br />
+                      <b>Supervisor statement</b>
+                    </span>
+                    {!acc.statementRead && <span className="page05__alert-dot" aria-label="Unread" />}
+                  </button>
+                )}
+
+                <div>
+                  {phase === 'r1' && <PillButton onClick={lockRound1}>{ACCOUNTABILITY_COPY.lockRound1}</PillButton>}
+                  {phase === 'evidence' && <PillButton onClick={() => setOpen(true)}>{ACCOUNTABILITY_COPY.openStatement}</PillButton>}
+                  {phase === 'r2' && <PillButton onClick={() => dispatch({ type: 'SUBMIT_ROUND2', allocation: alloc2 })}>Reassess Diagnosis</PillButton>}
+                </div>
+              </>
+            )}
+          </div>
+        </StageCopy>
+
+        {phase !== 'r1' && intro.ready && (
+          <div className="page05__docs">
+            <TableArtifact
+              className="page05__doc"
+              title={DOCUMENTS.supervisor.title}
+              label={`Open ${DOCUMENTS.supervisor.title}`}
+              folio
+              rotate={1}
+              reviewed={acc.statementRead}
+              glow={!acc.statementRead}
+              onOpen={() => setOpen(true)}
+            />
+          </div>
+        )}
+      </SimulationStage>
       <DocumentDialog doc={open ? DOCUMENTS.supervisor : null} onClose={closeStatement} />
     </>
   );

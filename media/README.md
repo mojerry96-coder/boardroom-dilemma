@@ -13,9 +13,27 @@ Generated media for the simulation, plus the script that assembles the films.
 | `build/` | Intermediate segments written by `build_films.py` (safe to delete) |
 
 The app uses optimised copies:
-- `app/public/scenes/` — scene stills (≤2048px, JPEG q80), portraits (1200px) and pre-blurred portrait backdrops.
-- `app/public/films/` — the films and their WebVTT captions, referenced by `FILMS` in `app/src/assets.ts`.
-- `app/public/voice/` — narrator lines, mapped to their exact text in `app/src/voice.ts`.
+- `app/public/scenes/` — scene stills (≤2048px, JPEG q80), portraits (1200px) and pre-blurred portrait backdrops, each with AVIF and WebP versions (full width and 1280px).
+- `app/public/films/` — the films (720p), a 480p rendition and a poster frame for each, and their WebVTT captions, referenced by `FILMS` in `app/src/assets.ts`.
+- `app/public/voice/` — narrator and character lines as MP3 and Opus (`.webm`), mapped to their exact text in `app/src/voice.ts`.
+
+### Background score (`audio/music/`)
+
+The source track is `audio/music/monume-motivation-570700.mp3`. The app plays a quiet, seamless loop of it, made with:
+
+```bash
+# 1 — trim the lead-in, dip the speech frequencies, master to a −26 LUFS bed
+ffmpeg -i audio/music/<track>.mp3 -af "silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.1,equalizer=f=2200:t=q:w=1.4:g=-3,loudnorm=I=-26:TP=-3:LRA=9" -ar 48000 bed.wav
+# 2 — crossfade the last 3s over the opening so the loop has no seam (CUT = duration − 3)
+ffmpeg -i bed.wav -filter_complex "[0]atrim=0:CUT,asetpts=N/SR/TB[a];[0]atrim=CUT,asetpts=N/SR/TB[b];[b][a]acrossfade=d=3:c1=tri:c2=tri[out]" -map "[out]" loop.wav
+# 3 — encode both versions
+ffmpeg -i loop.wav -c:a libopus -b:a 80k -vbr on -application audio ../app/public/music/score.webm
+ffmpeg -i loop.wav -c:a libmp3lame -b:a 112k ../app/public/music/score.mp3
+```
+
+Where the music plays and how loud is `app/src/sound.ts`; `app/README.md` explains the levels and ducking.
+
+`optimise_media.py` makes the AVIF/WebP photos, the tiny scene placeholders (`app/src/scenePlaceholders.ts`), the Opus voice files, and the 480p films and posters, and reports the size saved and visual similarity (SSIM) for each photo. Run it again after replacing any photo, voice line or film, then regenerate `app/src/imageManifest.ts`; `app/README.md` describes how the app picks between versions.
 
 All narration uses one voice: ElevenLabs "Victor Hopo – Narrative African Voice" (`neMPCpWtBwWZhxEC8qpe`), stability 0.55. When a narrator line changes in `content.ts`, re-record it with that voice and replace the file. A line without a recording falls back to the browser's speech voice.
 

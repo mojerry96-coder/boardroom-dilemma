@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { voiceFor } from '../voice';
+import { loadClip } from '../media';
+import { voiceSourcesFor } from '../voice';
 
 // Page narration with captions. Lines with a recording play in the films' narrator voice
 // (see voice.ts); anything else falls back to speech synthesis. Captions always carry the words.
@@ -7,17 +8,22 @@ import { voiceFor } from '../voice';
 interface Prefs {
   audio: boolean;
   captions: boolean;
+  /** Background score (levels live in src/sound.ts). */
+  music: boolean;
 }
 
 interface NarrationValue extends Prefs {
   caption: string | null;
+  /** True while a narrated or spoken line is playing, so the score can step back. */
+  speaking: boolean;
+  setMusic: (on: boolean) => void;
   /** Narrate with captions; onDone runs when the whole queue has finished (not when interrupted). */
   say: (text: string | string[], onDone?: () => void) => void;
   stop: () => void;
   setAudio: (on: boolean) => void;
   setCaptions: (on: boolean) => void;
-  /** Speak a single line without touching the caption (films render their own captions). */
-  speakOnly: (text: string) => void;
+  /** Speak a single line without touching the caption (the line is already on screen). */
+  speakOnly: (text: string, onDone?: () => void) => void;
 }
 
 const PREFS_KEY = 'boardroom-dilemma:prefs';
@@ -25,11 +31,11 @@ const PREFS_KEY = 'boardroom-dilemma:prefs';
 function loadPrefs(): Prefs {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
-    if (raw) return { audio: true, captions: true, ...(JSON.parse(raw) as Partial<Prefs>) };
+    if (raw) return { audio: true, captions: true, music: true, ...(JSON.parse(raw) as Partial<Prefs>) };
   } catch {
     /* ignore */
   }
-  return { audio: true, captions: true };
+  return { audio: true, captions: true, music: true };
 }
 
 const NarrationContext = createContext<NarrationValue | null>(null);
@@ -44,10 +50,14 @@ function pickVoice(): SpeechSynthesisVoice | undefined {
 export function NarrationProvider({ children }: { children: ReactNode }) {
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
   const [caption, setCaption] = useState<string | null>(null);
+  /** Lines spoken without a caption (characters, Board questions), counted so the score ducks for them too. */
+  const [voices, setVoices] = useState(0);
   const queue = useRef<string[]>([]);
   const queueDone = useRef<(() => void) | undefined>(undefined);
   const timer = useRef<number | undefined>(undefined);
   const player = useRef<HTMLAudioElement | null>(null);
+  /** Bumped whenever playback is silenced, so a clip that finishes downloading late never starts. */
+  const playToken = useRef(0);
   const prefsRef = useRef(prefs);
   prefsRef.current = prefs;
 
@@ -60,6 +70,7 @@ export function NarrationProvider({ children }: { children: ReactNode }) {
   }, [prefs]);
 
   const silence = useCallback(() => {
+    playToken.current++;
     const a = player.current;
     if (a) {
       a.onended = null;
@@ -76,13 +87,31 @@ export function NarrationProvider({ children }: { children: ReactNode }) {
 
   /** Speak one line in the recorded voice (or synthesis as a fallback); calls onDone when finished. */
   const speak = useCallback((line: string, onDone?: () => void) => {
-    const url = voiceFor(line);
-    if (url) {
+    const sources = voiceSourcesFor(line);
+    if (sources.length) {
       const a = (player.current ??= new Audio());
-      a.onended = () => onDone?.();
-      a.onerror = () => onDone?.();
-      a.src = url;
-      a.play().catch(() => onDone?.());
+      const token = playToken.current;
+      const current = () => token === playToken.current;
+      // Opus first; if it will not download or decode, fall back to the MP3; if nothing plays, move on.
+      const attempt = (i: number) => {
+        if (!current()) return;
+        if (i >= sources.length) return onDone?.();
+        loadClip(sources[i]).then(
+          (url) => {
+            if (!current()) return;
+            a.onended = () => onDone?.();
+            a.onerror = () => attempt(i + 1);
+            a.src = url;
+            a.play().catch((err: DOMException) => {
+              if (!current()) return;
+              if (err?.name === 'NotAllowedError') onDone?.();
+              else attempt(i + 1);
+            });
+          },
+          () => attempt(i + 1),
+        );
+      };
+      attempt(0);
       return;
     }
     const s = synth();
@@ -114,7 +143,7 @@ export function NarrationProvider({ children }: { children: ReactNode }) {
         if (done) return;
         done = true;
         window.clearTimeout(timer.current);
-        timer.current = window.setTimeout(next, 500);
+        timer.current = window.setTimeout(next, 250);
       };
       speak(line, finish);
       // Safety net if playback never reports an end (or is blocked without a user gesture).
@@ -139,13 +168,27 @@ export function NarrationProvider({ children }: { children: ReactNode }) {
     queue.current = [];
     queueDone.current = undefined;
     setCaption(null);
+    setVoices(0);
   }, [clear]);
 
   const speakOnly = useCallback(
-    (text: string) => {
-      if (!prefsRef.current.audio) return;
+    (text: string, onDone?: () => void) => {
+      if (!prefsRef.current.audio) {
+        // Without audio, allow roughly the time it takes to read the line.
+        if (onDone) window.setTimeout(onDone, Math.max(1800, text.split(/\s+/).length * 330));
+        return;
+      }
       silence();
-      speak(text);
+      let done = false;
+      setVoices((n) => n + 1);
+      const finish = () => {
+        if (done) return;
+        done = true;
+        setVoices((n) => Math.max(0, n - 1));
+        onDone?.();
+      };
+      speak(text, finish);
+      if (onDone) window.setTimeout(finish, Math.max(4000, text.split(/\s+/).length * 520));
     },
     [silence, speak],
   );
@@ -156,6 +199,7 @@ export function NarrationProvider({ children }: { children: ReactNode }) {
     () => ({
       ...prefs,
       caption,
+      speaking: caption !== null || voices > 0,
       say,
       stop,
       speakOnly,
@@ -164,8 +208,9 @@ export function NarrationProvider({ children }: { children: ReactNode }) {
         setPrefs((p) => ({ ...p, audio }));
       },
       setCaptions: (captions) => setPrefs((p) => ({ ...p, captions })),
+      setMusic: (music) => setPrefs((p) => ({ ...p, music })),
     }),
-    [prefs, caption, say, stop, speakOnly, silence],
+    [prefs, caption, voices, say, stop, speakOnly, silence],
   );
 
   return <NarrationContext.Provider value={value}>{children}</NarrationContext.Provider>;
@@ -200,10 +245,11 @@ export function useNarrateOnce(key: string, text: string | string[] | null, enab
   return doneKey === key;
 }
 
-/** Speaks a line that is already shown on screen (no caption, to avoid duplicating the subtitle). */
-export function useSpeakOnce(key: string, text: string | null, enabled = true) {
+/** Speaks a line that is already shown on screen (no caption). Returns true once it has been spoken. */
+export function useSpeakOnce(key: string, text: string | null, enabled = true): boolean {
   const { speakOnly } = useNarration();
   const said = useRef<string | null>(null);
+  const [doneKey, setDoneKey] = useState<string | null>(null);
   const textRef = useRef(text);
   textRef.current = text;
   useEffect(() => {
@@ -212,12 +258,14 @@ export function useSpeakOnce(key: string, text: string | null, enabled = true) {
     const id = window.setTimeout(() => {
       fired = true;
       said.current = key;
-      if (textRef.current) speakOnly(textRef.current);
-    }, 500);
+      if (textRef.current) speakOnly(textRef.current, () => setDoneKey(key));
+      else setDoneKey(key);
+    }, 400);
     return () => {
       if (!fired) window.clearTimeout(id);
     };
   }, [key, enabled, speakOnly]);
+  return doneKey === key;
 }
 
 export function CaptionBar() {

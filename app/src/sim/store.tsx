@@ -13,7 +13,7 @@ import {
 import { persistence } from './persistence';
 import { resolveEnding } from './resolver';
 import { newSeed } from './shuffle';
-import type { Allocation, BoardCase, Delta, EvidenceId, LogEntry, Opt, SimState, StakeholderId } from './types';
+import type { Allocation, BoardCase, Delta, EvidenceId, LensId, LogEntry, Opt, SimState, StakeholderId } from './types';
 
 export function initialState(): SimState {
   return {
@@ -31,6 +31,7 @@ export function initialState(): SimState {
     executiveResponse: null,
     relationshipCost: false,
     boardCase: {
+      selectedEvidence: [],
       recommendation: null,
       lenses: [],
       justifications: {},
@@ -68,6 +69,8 @@ export type Action =
   | { type: 'CHOOSE_STAKEHOLDER'; id: StakeholderId; opt: Opt }
   | { type: 'CHOOSE_EXECUTIVE'; opt: Opt }
   | { type: 'UPDATE_BOARD_CASE'; patch: Partial<BoardCase> }
+  | { type: 'TOGGLE_CASE_EVIDENCE'; id: EvidenceId }
+  | { type: 'TOGGLE_CASE_LENS'; id: LensId }
   | { type: 'COMPLETE_CASE_STEP'; step: number }
   | { type: 'LOCK_BOARD_CASE' }
   | { type: 'CHOOSE_Q1'; opt: Opt }
@@ -85,7 +88,8 @@ function record(s: SimState, key: string, page: number, choice: string, delta: D
 export function reducer(s: SimState, a: Action): SimState {
   switch (a.type) {
     case 'LOAD':
-      return a.state;
+      // Sessions saved before the Board-pack evidence selection existed.
+      return { ...a.state, boardCase: { ...a.state.boardCase, selectedEvidence: a.state.boardCase.selectedEvidence ?? [] } };
     case 'RESET':
       return initialState();
     case 'GO':
@@ -147,6 +151,19 @@ export function reducer(s: SimState, a: Action): SimState {
     case 'UPDATE_BOARD_CASE':
       if (s.boardCase.locked) return s;
       return { ...s, boardCase: { ...s.boardCase, ...a.patch } };
+    case 'TOGGLE_CASE_EVIDENCE': {
+      if (s.boardCase.locked) return s;
+      const list = s.boardCase.selectedEvidence;
+      const selectedEvidence = list.includes(a.id) ? list.filter((x) => x !== a.id) : [...list, a.id];
+      return { ...s, boardCase: { ...s.boardCase, selectedEvidence } };
+    }
+    case 'TOGGLE_CASE_LENS': {
+      if (s.boardCase.locked) return s;
+      const list = s.boardCase.lenses;
+      if (!list.includes(a.id) && list.length >= 3) return s;
+      const lenses = list.includes(a.id) ? list.filter((x) => x !== a.id) : [...list, a.id];
+      return { ...s, boardCase: { ...s.boardCase, lenses } };
+    }
     case 'COMPLETE_CASE_STEP':
       if (s.boardCase.locked) return s;
       return { ...s, boardCase: { ...s.boardCase, stepsComplete: Math.max(s.boardCase.stepsComplete, a.step) } };

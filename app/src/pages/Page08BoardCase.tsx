@@ -1,51 +1,41 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import { SCENES } from '../assets';
-import { OutcomeCard } from '../components/Choices';
-import { ContextView, DockHeader, MediaNotice, Prompt } from '../components/Dock';
-import { ArrowIcon, CheckIcon, DeltaMark } from '../components/Icons';
-import { useNarrateOnce } from '../components/Narration';
-import { Stage } from '../components/Stage';
-import { VoiceField } from '../components/VoiceField';
+import { CaretRight, ChartBar, Check, FileText, Lock, Scales, ShieldCheck } from '@phosphor-icons/react';
+import { PROPS, SCENES } from '../assets';
+import { DiagnosisSection, EvidenceSection, LensSection, ReformSection } from '../components/BoardPackSections';
+import { DeltaMark } from '../components/Icons';
+import { usePageIntro } from '../components/Experience';
+import { useNarration } from '../components/Narration';
 import { primaryLevers } from '../sim/accountability';
-import {
-  BOARD_CASE_COPY,
-  BRAND,
-  FRAMING,
-  LENSES,
-  LEVER_COPY,
-  NARRATION,
-  PAGE_META,
-  RECOMMENDATION_BY_SELF_REPORT,
-  REFORM_CARDS,
-  SELF_REPORT,
-  UI,
-} from '../sim/content';
-import { primaryFailureText } from '../sim/derive';
+import { Reveal, revealTiming } from '../components/Reveal';
+import { SimulationStage } from '../components/SimulationStage';
+import { OutcomePanel, PillButton, StageCopy } from '../components/ui';
+import { BOARD_CASE_COPY, BRAND, NARRATION, PAGE_META, RECOMMENDATION_BY_SELF_REPORT, UI } from '../sim/content';
+import { GUIDE, OBJECTIVES } from '../sim/experience';
 import { useSim } from '../sim/store';
-import { LEVERS, type BoardCase, type LensId } from '../sim/types';
+import type { BoardCase, EvidenceId, LensId } from '../sim/types';
 
-// Screen 7 — the script's four ordered sections, one small task at a time.
-// The board pack on the media fills as sections complete.
+// Page 08 — Build the Board Case (spec §19). The open Board pack is the interface:
+// four section tabs on the left page, the working page on the right. Sections complete in order.
 
-const TAB_COLORS = ['#4f7cac', '#3f9e6e', '#c9a24a', '#8a63b5'];
+const TABS: { label: string; icon: ReactNode; color: string }[] = [
+  { label: 'Selected Evidence', icon: <FileText size={20} />, color: '#6c8db4' },
+  { label: 'Ethical Lens', icon: <Scales size={20} />, color: '#3f8f73' },
+  { label: 'Diagnosis', icon: <ChartBar size={20} />, color: '#c2a14f' },
+  { label: 'Governance Reform', icon: <ShieldCheck size={20} />, color: '#7d63b0' },
+];
 
 export function Page08BoardCase() {
   const { sim, dispatch } = useSim();
   const bc = sim.boardCase;
-  const { round1: r1, round2: r2 } = sim.accountability;
-  const primary = r2 ? primaryLevers(r2) : [];
-  const min = BOARD_CASE_COPY.minChars;
-  const current = bc.locked ? 5 : Math.min(bc.stepsComplete + 1, 4);
-  const [view, setView] = useState<number | null>(null);
-  const shown = view ?? current;
-  const [lensIndex, setLensIndex] = useState<number | null>(null);
-  const [reformStage, setReformStage] = useState<'target' | 'text'>(bc.reformTarget ? 'text' : 'target');
-  const [noteOpen, setNoteOpen] = useState(bc.diagnosisNotes.trim().length > 0);
+  const allDone = bc.stepsComplete >= 4;
+  const [section, setSection] = useState<number | null>(bc.locked ? null : Math.min(bc.stepsComplete + 1, 4));
   const [message, setMessage] = useState<string | null>(null);
-  const [ctx, setCtx] = useState(false);
 
-  useNarrateOnce('case-load', NARRATION.boardCaseLoad);
-  useNarrateOnce('case-reform', NARRATION.boardCaseReform, shown === 4 && !bc.locked);
+  const intro = usePageIntro('case', NARRATION.boardCaseLoad, bc.stepsComplete === 0 && !bc.locked);
+  const timing = revealTiming(PAGE_META[8].title, PAGE_META[8].subtitle, OBJECTIVES[8]);
+  const { say } = useNarration();
+  const r2 = sim.accountability.round2;
+  const reformMisses = bc.reformTarget !== null && r2 !== null && !primaryLevers(r2).includes(bc.reformTarget);
 
   useEffect(() => {
     if (bc.recommendation === null) {
@@ -54,305 +44,141 @@ export function Page08BoardCase() {
   }, [bc.recommendation, sim.selfReportDecision, dispatch]);
 
   const update = (patch: Partial<BoardCase>) => dispatch({ type: 'UPDATE_BOARD_CASE', patch });
-  const lensTitle = (id: LensId) => LENSES.find((l) => l.id === id)?.title ?? id;
-  const recommendationValid = (bc.recommendation ?? '').trim().length >= 20;
-  const lensesValid = bc.lenses.length === 3 && bc.lenses.every((l) => (bc.justifications[l] ?? '').trim().length >= min);
-  const reformValid = bc.reformTarget !== null && bc.reformText.trim().length >= min;
-  const mismatch = bc.reformTarget !== null && r2 !== null && !primary.includes(bc.reformTarget);
 
-  const finishSection = (n: number) => {
-    setMessage(null);
-    setCtx(false);
-    if (view !== null) {
-      setView(null);
-      return;
-    }
-    dispatch({ type: 'COMPLETE_CASE_STEP', step: n });
-  };
-
-  const goSection = (n: number) => {
-    setCtx(false);
-    if (bc.locked) return;
-    if (n === current) {
-      setView(null);
+  const openSection = (n: number) => {
+    if (bc.locked || n <= bc.stepsComplete + 1) {
+      setSection(n);
       setMessage(null);
-      return;
-    }
-    if (n < current) {
-      setView(n);
-      setMessage(null);
-      if (n === 2) setLensIndex(null);
       return;
     }
     setMessage(n === 4 && bc.stepsComplete < 2 ? BOARD_CASE_COPY.skipStep2 : BOARD_CASE_COPY.earlyStep);
   };
 
-  const toggleLens = (id: LensId) => {
-    const on = bc.lenses.includes(id);
-    if (!on && bc.lenses.length >= 3) return;
-    update({ lenses: on ? bc.lenses.filter((l) => l !== id) : [...bc.lenses, id] });
+  const done = (n: number) => {
+    dispatch({ type: 'COMPLETE_CASE_STEP', step: n });
+    // After each section, the narrator says what it adds to the case and what comes next.
+    if (n === 3) say([GUIDE.caseAdded[2], GUIDE.caseReform]);
+    else if (n === 4) say(reformMisses ? GUIDE.caseAddedMismatch : GUIDE.caseAdded[3]);
+    else say(GUIDE.caseAdded[n - 1]);
+    setSection(n < 4 ? Math.max(n + 1, Math.min(bc.stepsComplete + 1, 4)) : null);
+    setMessage(null);
   };
 
-  const lock = () => {
-    if (!recommendationValid || !lensesValid || !r2) {
-      setMessage(UI.caseIncomplete);
-      return;
-    }
-    dispatch({ type: 'LOCK_BOARD_CASE' });
+  const sectionProps = {
+    sim,
+    update,
+    toggleEvidence: (id: EvidenceId) => dispatch({ type: 'TOGGLE_CASE_EVIDENCE', id }),
+    toggleLens: (id: LensId) => dispatch({ type: 'TOGGLE_CASE_LENS', id }),
+    readOnly: bc.locked,
   };
-
-  const sectionIndex = Math.min(shown, 4) - 1;
-  let body: ReactNode;
-
-  if (ctx) {
-    const intro = (
-      <>
-        <p className="context-title">{BOARD_CASE_COPY.steps[sectionIndex]}</p>
-        <p>
-          {shown === 3 && r1 ? `Round 1 allocation was ${r1.agency}% / ${r1.stewardship}% / ${r1.stakeholderRecognition}%. ` : ''}
-          {BOARD_CASE_COPY.stepFeedback[sectionIndex]}
+  const workspace =
+    section === 1 ? (
+      <EvidenceSection {...sectionProps} onDone={() => done(1)} />
+    ) : section === 2 ? (
+      <LensSection {...sectionProps} onDone={() => done(2)} />
+    ) : section === 3 ? (
+      <DiagnosisSection {...sectionProps} onDone={() => done(3)} />
+    ) : section === 4 ? (
+      <ReformSection key={bc.locked ? 'locked' : 'open'} {...sectionProps} onDone={() => done(4)} />
+    ) : (
+      <div className="pack-cover">
+        <p className="pack-cover__org">
+          <DeltaMark size={22} /> {BRAND.orgShort}
         </p>
-      </>
-    );
-    const lensList = (
-      <ul className="context-list">
-        {LENSES.map((l) => (
-          <li key={l.id}>
-            <b>{l.title}</b> — {l.description}
-          </li>
-        ))}
-      </ul>
-    );
-    body = <ContextView onBack={() => setCtx(false)} pages={shown === 2 ? [intro, lensList] : [intro]} />;
-  } else if (shown === 5) {
-    body = (
-      <OutcomeCard
-        text={bc.reformMismatch ? `${UI.caseLocked} ${BOARD_CASE_COPY.mismatch}` : UI.caseLocked}
-        feedback={BOARD_CASE_COPY.stepFeedback[3]}
-        continueLabel="Face the Board"
-        onContinue={() => dispatch({ type: 'GO', page: 9 })}
-      />
-    );
-  } else if (shown === 1) {
-    body = (
-      <>
-        <Prompt step="Section 1 of 4 · Recommendation">{UI.caseRecommendation}</Prompt>
-        <VoiceField label="Recommendation" showLabel={false} value={bc.recommendation ?? ''} onChange={(v) => update({ recommendation: v })} rows={4} />
-        <button type="button" className="btn btn--primary" disabled={!recommendationValid} onClick={() => finishSection(1)}>
-          Continue
-          <ArrowIcon />
-        </button>
-      </>
-    );
-  } else if (shown === 2 && lensIndex === null) {
-    body = (
-      <>
-        <Prompt step={`Section 2 of 4 · ${bc.lenses.length} of 3 chosen`}>{UI.caseLenses}</Prompt>
-        <div className="picker__grid" role="group" aria-label={UI.caseLenses}>
-          {LENSES.map((l) => {
-            const on = bc.lenses.includes(l.id);
-            return (
-              <button
-                key={l.id}
-                type="button"
-                className={`opt${on ? ' is-selected' : ''}`}
-                aria-pressed={on}
-                disabled={!on && bc.lenses.length >= 3}
-                title={l.description}
-                onClick={() => toggleLens(l.id)}
-              >
-                {l.title}
-              </button>
-            );
-          })}
-        </div>
-        <button type="button" className="btn btn--primary" disabled={bc.lenses.length !== 3} onClick={() => setLensIndex(0)}>
-          Justify your lenses
-          <ArrowIcon />
-        </button>
-      </>
-    );
-  } else if (shown === 2 && lensIndex !== null) {
-    const id = bc.lenses[lensIndex];
-    const value = bc.justifications[id] ?? '';
-    body = (
-      <>
-        <Prompt step={UI.caseLensJustify(lensIndex + 1, lensTitle(id))}>{UI.caseLensQuestion}</Prompt>
-        <p className="ref-line">
-          Your framing: {sim.boardFraming ? FRAMING.short[sim.boardFraming] : '—'} · Self-report:{' '}
-          {sim.selfReportDecision ? SELF_REPORT.short[sim.selfReportDecision] : '—'}
-        </p>
-        <VoiceField
-          key={id}
-          label={`Justification for the ${lensTitle(id)} lens`}
-          showLabel={false}
-          value={value}
-          onChange={(v) => update({ justifications: { ...bc.justifications, [id]: v } })}
-          placeholder={UI.caseLensPlaceholder}
-          minChars={min}
-          rows={3}
-        />
-        <div className="row">
-          <button
-            type="button"
-            className="btn btn--primary"
-            disabled={value.trim().length < min}
-            onClick={() => {
-              if (lensIndex < 2) setLensIndex(lensIndex + 1);
-              else {
-                setLensIndex(null);
-                finishSection(2);
-              }
-            }}
-          >
-            {lensIndex < 2 ? 'Next lens' : 'Continue'}
-            <ArrowIcon />
-          </button>
-          <button type="button" className="btn btn--quiet" onClick={() => setLensIndex(lensIndex > 0 ? lensIndex - 1 : null)}>
-            Back
-          </button>
-        </div>
-      </>
-    );
-  } else if (shown === 3) {
-    body = (
-      <>
-        <Prompt step="Section 3 of 4 · Diagnosis">
-          {r2
-            ? `Agency ${r2.agency}% · Stewardship ${r2.stewardship}% · Stakeholder-recognition ${r2.stakeholderRecognition}%. Primary failure: ${primaryFailureText(r2)}.`
-            : 'Complete the accountability diagnosis first.'}
-        </Prompt>
-        {noteOpen && (
-          <VoiceField
-            label={BOARD_CASE_COPY.notesLabel}
-            showLabel={false}
-            placeholder="Optional note for the Board…"
-            value={bc.diagnosisNotes}
-            onChange={(v) => update({ diagnosisNotes: v })}
-            rows={2}
-          />
+        <p className="pack-cover__title">Board Case</p>
+        <p className="pack-cover__meta">Prepared by {sim.learnerName.trim() || 'the Company Secretary'}</p>
+        <p className="pack-cover__meta">{bc.stepsComplete} of 4 sections complete</p>
+        {bc.locked ? (
+          <span className="pack-cover__locked">
+            <img className="pack-cover__seal" src={PROPS.lockedSeal} alt="" />
+            <span className="pack-cover__stamp">Locked for the Board</span>
+          </span>
+        ) : (
+          <p className="pack-cover__note">Better questions. Stronger decisions.</p>
         )}
-        <div className="row">
-          <button type="button" className="btn btn--primary" disabled={!r2} onClick={() => finishSection(3)}>
-            Continue
-            <ArrowIcon />
-          </button>
-          {!noteOpen && (
-            <button type="button" className="btn btn--quiet" onClick={() => setNoteOpen(true)}>
-              {UI.caseNote}
-            </button>
-          )}
-        </div>
-      </>
-    );
-  } else if (reformStage === 'target') {
-    body = (
-      <>
-        <Prompt step="Section 4 of 4 · Governance reform">{UI.caseTarget}</Prompt>
-        <div className="picker__grid picker__grid--single" role="group" aria-label={UI.caseTarget}>
-          {LEVERS.map((l) => (
-            <button
-              key={l}
-              type="button"
-              className={`opt${bc.reformTarget === l ? ' is-selected' : ''}`}
-              aria-pressed={bc.reformTarget === l}
-              onClick={() => update({ reformTarget: l })}
-            >
-              {LEVER_COPY[l].label}
-              {primary.includes(l) && <span className="tag">Your primary diagnosis</span>}
-            </button>
-          ))}
-        </div>
-        <button type="button" className="btn btn--primary" disabled={!bc.reformTarget} onClick={() => setReformStage('text')}>
-          Continue
-          <ArrowIcon />
-        </button>
-      </>
-    );
-  } else {
-    const target = bc.reformTarget;
-    body = (
-      <>
-        <div className="target-line">
-          <span className="prompt__step">Reform · {target ? LEVER_COPY[target].label : ''}</span>
-          <button type="button" className="btn btn--link btn--tiny" onClick={() => setReformStage('target')}>
-            {UI.caseChangeTarget}
-          </button>
-        </div>
-        <VoiceField
-          label="Your reform"
-          showLabel={false}
-          value={bc.reformText}
-          onChange={(v) => update({ reformText: v })}
-          placeholder={UI.caseReform}
-          minChars={min}
-          rows={3}
-        />
-        <div className="row">
-          <button type="button" className="btn btn--accent" disabled={!reformValid} onClick={lock}>
-            {BOARD_CASE_COPY.lock}
-          </button>
-          {target && (
-            <button
-              type="button"
-              className="btn btn--quiet btn--small"
-              onClick={() => update({ reformText: REFORM_CARDS[target].text, reformCard: target })}
-            >
-              {UI.caseSuggested}
-            </button>
-          )}
-        </div>
-      </>
-    );
-  }
-
-  const overlay = (
-    <div className="boardpack" aria-hidden="true">
-      <div className="boardpack__page">
-        <span className="boardpack__org">
-          <DeltaMark size={12} /> {BRAND.org}
-        </span>
-        {BOARD_CASE_COPY.steps.map((title, i) => {
-          const n = i + 1;
-          const done = bc.stepsComplete >= n;
-          return (
-            <button
-              key={title}
-              type="button"
-              tabIndex={-1}
-              className={`boardpack__tab${done ? ' is-done' : ''}${Math.min(shown, 4) === n && !bc.locked ? ' is-open' : ''}`}
-              style={{ '--tab': TAB_COLORS[i] } as CSSProperties}
-              onClick={() => goSection(n)}
-            >
-              {title}
-              <span className="boardpack__tick">{done && <CheckIcon width={11} height={11} />}</span>
-            </button>
-          );
-        })}
       </div>
-      <div className="boardpack__page">
-        <p className="boardpack__heading">Board Case</p>
-        <p className="boardpack__meta">Prepared by {sim.learnerName.trim() || 'the Company Secretary'}</p>
-        <p className="boardpack__meta">{bc.stepsComplete} of 4 sections complete</p>
-        <div className="boardpack__bar">
-          <span style={{ width: `${bc.stepsComplete * 25}%` }} />
-        </div>
-        {bc.locked && <span className="boardpack__stamp">LOCKED FOR BOARD</span>}
-      </div>
-    </div>
-  );
+    );
 
   return (
-    <Stage
-      image={SCENES.boardCase}
-      label="Build the Board case"
-      overlay={overlay}
-      quote={!ctx && shown === 4 && reformStage === 'text' && mismatch ? <MediaNotice text={BOARD_CASE_COPY.mismatch} /> : undefined}
-      chapter={{ title: PAGE_META[8].title, subtitle: PAGE_META[8].subtitle }}
-    >
-      <DockHeader page={8} title="Board Case" steps={4} current={Math.min(bc.stepsComplete, 4)} onContext={() => setCtx((c) => !c)} contextOpen={ctx} />
-      {message && !ctx && <Prompt tone="warn">{message}</Prompt>}
-      {body}
-    </Stage>
+    <SimulationStage page={8} image={SCENES.boardCase} label="Build the Board Case" wash="strong" intro={intro}>
+      <StageCopy className="page08__copy" title={PAGE_META[8].title} subtitle={PAGE_META[8].subtitle} objective={OBJECTIVES[8]} intro={intro}>
+        <div className="page08__actions">
+          {bc.locked ? (
+            <OutcomePanel
+              className="page08__outcome"
+              text={bc.reformMismatch ? `${UI.caseLocked} ${BOARD_CASE_COPY.mismatch}` : UI.caseLocked}
+              feedback={BOARD_CASE_COPY.stepFeedback[3]}
+              continueLabel="Face the Board"
+              onContinue={() => dispatch({ type: 'GO', page: 9 })}
+            />
+          ) : (
+            <>
+              <PillButton
+                disabled={!allDone}
+                onClick={() => {
+                  dispatch({ type: 'LOCK_BOARD_CASE' });
+                  say(GUIDE.caseLocked);
+                }}
+              >
+                {BOARD_CASE_COPY.lock}
+              </PillButton>
+              {!allDone && <p className="page08__progress">{bc.stepsComplete} of 4 sections added</p>}
+              {message && (
+                <p className="stage-note stage-note--warn" role="alert">
+                  {message}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      </StageCopy>
+
+      <Reveal
+        show={intro.ready}
+        animate={intro.animate}
+        delay={timing.controlsAt}
+        as="section"
+        className="page08__pack board-pack-hotspot"
+        style={{ '--pack-photo': `url(${PROPS.packOpen})`, '--pack-cover': `url(${PROPS.packCover})` } as CSSProperties}
+        id="controls"
+        aria-label="Board pack"
+      >
+        <div className="pack-page pack-page--tabs">
+          <p className="pack-org">
+            <DeltaMark size={16} /> {BRAND.org}
+          </p>
+          <div className={`pack-tabs${intro.animate ? ' stagger' : ''}`} style={{ '--stagger-base': `${timing.controlsAt + 300}ms` } as CSSProperties}>
+            {TABS.map((tab, i) => {
+              const n = i + 1;
+              const complete = bc.stepsComplete >= n;
+              const available = bc.locked || n <= bc.stepsComplete + 1;
+              return (
+                <button
+                  key={tab.label}
+                  type="button"
+                  className={`pack-tab${section === n ? ' is-open' : ''}${complete ? ' is-done' : ''}`}
+                  style={{ '--tab': tab.color, '--i': i } as CSSProperties}
+                  aria-current={section === n ? 'step' : undefined}
+                  aria-label={`${tab.label}${complete ? ', added' : available ? '' : ', not yet available'}`}
+                  onClick={() => openSection(n)}
+                >
+                  <span className="pack-tab__icon" aria-hidden="true">
+                    {tab.icon}
+                  </span>
+                  <span className="pack-tab__label">{tab.label}</span>
+                  <span className="pack-tab__state" aria-hidden="true">
+                    {complete ? <Check size={16} /> : available ? <CaretRight size={16} /> : <Lock size={14} />}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="pack-spine" aria-hidden="true" />
+        <div className="pack-page pack-page--work" key={section ?? 'cover'}>
+          {workspace}
+        </div>
+      </Reveal>
+    </SimulationStage>
   );
 }

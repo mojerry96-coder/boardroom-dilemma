@@ -1,0 +1,106 @@
+/* Design tokens — BOARDROOM_DILEMMA_EXACT_REPLACEMENT_BUILD.md §4–5.
+   Aliases at the end keep the in-world documents, films and journey styling working. */
+
+:root {
+  --font-display: 'Afacad', system-ui, sans-serif;
+  --font-ui: 'Manrope', system-ui, sans-serif;
+
+  /* Core colors */
+  --white: #f8fafc;
+  --white-strong: #ffffff;
+  --ink: #102139;
+  --ink-soft: #506176;
+  --ink-muted: #8390a0;
+
+  /* Delta / interaction accents */
+  --delta-green: #0f766e;
+  --delta-green-dark: #086358;
+  --delta-green-soft: #d9ece8;
+  --delta-blue: #0f4f82;
+  --delta-blue-dark: #0b3f6a;
+  --danger: #bd4141;
+  --warning: #c49b55;
+
+  /* Glass surfaces */
+  --glass-dark: rgba(11, 25, 42, 0.7);
+  --glass-dark-strong: rgba(11, 25, 42, 0.82);
+  --glass-light: rgba(255, 255, 255, 0.94);
+  --glass-light-soft: rgba(255, 255, 255, 0.82);
+  --glass-border-light: rgba(255, 255, 255, 0.58);
+  --glass-border-dark: rgba(18, 36, 57, 0.16);
+
+  /* Shadow / focus */
+  --shadow-soft: 0 12px 42px rgba(5, 19, 33, 0.14);
+  --shadow-modal: 0 30px 90px rgba(3, 13, 24, 0.36);
+  --artifact-focus: 0 0 0 2px rgba(93, 177, 255, 0.92), 0 8px 34px rgba(57, 151, 240, 0.26);
+
+  /* Radius */
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 28px;
+  --radius-pill: 999px;
+
+  /* Desktop stage spacing based on 1672 x 941 reference */
+  --stage-pad-x: clamp(28px, 3.45vw, 58px);
+  --stage-pad-top: clamp(26px, 3.4vh, 34px);
+  --stage-pad-bottom: clamp(24px, 3.8vh, 36px);
+
+  /* Type */
+  --eyebrow-size: clamp(11px, 0.78vw, 14px);
+  --title-size: clamp(48px, 4.45vw, 76px);
+  --title-size-large: clamp(52px, 4.8vw, 82px);
+  --subtitle-size: clamp(17px, 1.35vw, 24px);
+  --body-size: clamp(14px, 1vw, 17px);
+  --choice-size: clamp(14px, 1vw, 17px);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.2, 0.75, 0.3, 1);
+
+  /* Safe areas */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+
+  /* Aliases used by documents, films and the journey view */
+  --font-head: var(--font-display);
+  --font-body: var(--font-ui);
+  --paper: #fbfaf6;
+  --paper-ink: #1f252c;
+  --paper-dim: #5a636d;
+  --focus: #93c5fd;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: #0f1824;
+  color: var(--white);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+img {
+  max-width: 100%;
+}
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}

@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { X } from '@phosphor-icons/react';
 import {
   BOARD_CASE_COPY,
   EVIDENCE_COPY,
+  EVIDENCE_LABEL,
   EXECUTIVE,
   FRAMING,
   LENSES,
@@ -14,7 +15,7 @@ import {
 } from '../sim/content';
 import { allocationText, reformTitleText, round2Message, stakeholderExtras } from '../sim/derive';
 import type { SimState } from '../sim/types';
-import { CloseIcon } from './Icons';
+import { useModal } from './Documents';
 
 interface JourneyItem {
   title: string;
@@ -76,6 +77,7 @@ function journeyItems(sim: SimState): JourneyItem[] {
       title: 'Board case',
       choice: `Reform: ${reformTitleText(bc)}`,
       lines: [
+        `Evidence included: ${bc.selectedEvidence.length ? bc.selectedEvidence.map((id) => EVIDENCE_LABEL[id]).join(', ') : 'none selected'}`,
         `Recommendation: ${bc.recommendation ?? ''}`,
         `Ethical lenses: ${bc.lenses.map((id) => LENSES.find((l) => l.id === id)?.title).join(', ')}`,
         bc.reformMismatch ? BOARD_CASE_COPY.mismatch : 'Your reform addresses the failure you diagnosed as primary.',
@@ -93,57 +95,19 @@ function journeyItems(sim: SimState): JourneyItem[] {
 }
 
 export function JourneyDialog({ open, onClose, sim }: { open: boolean; onClose: () => void; sim: SimState }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  const selfClosed = useRef(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (open && !el.open) el.showModal();
-    if (!open && el.open) {
-      selfClosed.current = true;
-      el.close();
-    }
-  }, [open]);
+  const modal = useModal(open, onClose);
 
   return (
-    <dialog
-      ref={ref}
-      className="doc-dialog"
-      aria-labelledby="journey-title"
-      onClose={() => {
-        if (selfClosed.current) {
-          selfClosed.current = false;
-          return;
-        }
-        if (open) onClose();
-      }}
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          onClose();
-        }
-      }}
-      onClick={(e) => {
-        if (e.target === ref.current) onClose();
-      }}
-    >
+    <dialog {...modal} className="doc-dialog doc-dialog--journey" aria-labelledby="journey-title">
       {open && (
         <div className="doc-dialog__frame">
-          <div className="doc-dialog__bar">
-            <p className="doc-dialog__label">Review Journey</p>
-            <button type="button" className="btn btn--light btn--small" onClick={onClose} autoFocus>
-              <CloseIcon width={16} height={16} />
-              Close
-            </button>
-          </div>
+          <button type="button" className="doc-dialog__close" onClick={onClose} aria-label="Close review" title="Close review" autoFocus>
+            <X size={22} />
+          </button>
           <div className="doc-dialog__scroll">
             <div className="journey">
-              <h2 id="journey-title" className="section-title" style={{ marginBottom: 16 }}>
-                Your decisions, in order
+              <h2 id="journey-title" className="section-title">
+                Your journey, in order
               </h2>
               <ol className="journey__list">
                 {journeyItems(sim).map((item) => (

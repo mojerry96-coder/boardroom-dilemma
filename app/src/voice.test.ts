@@ -1,13 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { NARRATION, QA_FOLLOW_UPS, STAKEHOLDERS } from './sim/content';
 import { fill, singleCauseLine } from './sim/derive';
+import { GUIDE } from './sim/experience';
 import { VOICE_LINES, voiceFor } from './voice';
 
 const recorded = new Set(Object.keys(import.meta.glob('../public/voice/*.mp3')).map((p) => p.split('/').pop()));
+const recordedOpus = new Set(Object.keys(import.meta.glob('../public/voice/*.webm')).map((p) => p.split('/').pop()));
 
 describe('recorded voice lines', () => {
   it('has an audio file for every mapped line', () => {
     const missing = VOICE_LINES.map(([, file]) => `${file}.mp3`).filter((file) => !recorded.has(file));
+    expect(missing).toEqual([]);
+  });
+
+  it('has an Opus version of every mapped recording', () => {
+    const missing = VOICE_LINES.map(([, file]) => `${file}.webm`).filter((file) => !recordedOpus.has(file));
     expect(missing).toEqual([]);
   });
 
@@ -16,7 +23,16 @@ describe('recorded voice lines', () => {
   });
 
   it('covers narration, stakeholders and the follow-ups the Board page builds', () => {
-    for (const text of Object.values(NARRATION)) expect(voiceFor(text)).toBeDefined();
+    // These script cue lines are no longer spoken; the guide's full-sentence lines play instead.
+    const replaced = new Set<string>([
+      NARRATION.evidencePattern,
+      NARRATION.accountabilityNewEvidence,
+      NARRATION.accountabilityReassess,
+      NARRATION.boardCaseReform,
+      NARRATION.boardQALoad,
+    ]);
+    for (const text of Object.values(NARRATION).filter((t) => !replaced.has(t))) expect(voiceFor(text)).toBeDefined();
+    for (const text of Object.values(GUIDE).flat()) expect(voiceFor(text)).toBeDefined();
     for (const s of STAKEHOLDERS) expect(voiceFor(s.line)).toBeDefined();
     expect(voiceFor(singleCauseLine({ agency: 100, stewardship: 0, stakeholderRecognition: 0 }))).toBeDefined();
     expect(voiceFor(singleCauseLine({ agency: 60, stewardship: 40, stakeholderRecognition: 0 }))).toBeDefined();

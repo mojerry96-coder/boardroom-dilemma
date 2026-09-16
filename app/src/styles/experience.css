@@ -1,0 +1,916 @@
+/* Guided experience: progressive reveal, typing, chapter cards, mission map, key facts, countdown. */
+
+/* ── Reveal ────────────────────────────────────────────── */
+/* Fill mode `backwards`: hidden during the delay, then normal styles (hover, locked states) apply again. */
+.reveal {
+  animation: reveal-fade 0.5s var(--ease-out) backwards;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+@keyframes reveal-fade {
+  0% {
+    opacity: 0;
+    visibility: hidden;
+  }
+  1% {
+    visibility: visible;
+  }
+  100% {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+/* Doubled class so the stagger timing beats per-item delays such as `.desk-folder:nth-child(n)`. */
+.stagger.stagger > * {
+  animation: reveal-up 0.46s var(--ease-out) backwards;
+  animation-delay: calc(var(--stagger-base, 0ms) + var(--i, 0) * 120ms);
+}
+/* `translate` (not `transform`) so it never fights an element's own hover transform. */
+@keyframes reveal-up {
+  0% {
+    opacity: 0;
+    translate: 0 14px;
+    visibility: hidden;
+  }
+  1% {
+    visibility: visible;
+  }
+  100% {
+    opacity: 1;
+    translate: none;
+    visibility: visible;
+  }
+}
+
+/* ── Typing ────────────────────────────────────────────── */
+.type-ghost {
+  visibility: hidden;
+}
+.type-caret {
+  display: inline-block;
+  width: 0.08em;
+  min-width: 2px;
+  height: 0.95em;
+  margin: 0 0.02em -0.1em;
+  background: currentColor;
+  animation: caret 0.9s steps(1) infinite;
+}
+@keyframes caret {
+  50% {
+    opacity: 0;
+  }
+}
+.stage-objective {
+  margin: 14px 0 0;
+  max-width: 620px;
+  padding-left: 14px;
+  border-left: 3px solid #5fb7a6;
+  font-size: clamp(15px, 1.05vw, 18px);
+  font-weight: 600;
+  line-height: 1.45;
+  color: #fff;
+  text-shadow: 0 1px 14px rgba(5, 14, 25, 0.6);
+}
+
+/* ── Narration-first opening ───────────────────────────── */
+.skip-intro {
+  position: absolute;
+  z-index: 25;
+  left: 50%;
+  bottom: calc(var(--stage-pad-bottom) + var(--safe-bottom));
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(8, 18, 31, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font: 600 14px var(--font-ui);
+  cursor: pointer;
+  animation: fade-in 0.4s ease 0.8s both;
+}
+.skip-intro:hover {
+  background: rgba(8, 18, 31, 0.8);
+}
+.sim-stage.is-intro .sim-stage__wash {
+  opacity: 0.55;
+  transition: opacity 0.6s ease;
+}
+.app:has(.sim-stage.is-intro) .caption-bar {
+  left: 50%;
+  right: auto;
+  top: auto;
+  bottom: calc(var(--stage-pad-bottom) + 64px + var(--safe-bottom));
+  width: min(760px, 86vw);
+  transform: translateX(-50%);
+  justify-content: center;
+}
+.app:has(.sim-stage.is-intro) .caption-bar span {
+  font-size: clamp(17px, 1.35vw, 22px);
+  padding: 12px 20px;
+  text-align: center;
+}
+
+/* Progress label → mission map */
+.sim-stage__mission {
+  margin-right: 14px;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(8, 18, 31, 0.35);
+  color: #fff;
+  font: 600 12px var(--font-ui);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.sim-stage__mission:hover {
+  background: rgba(8, 18, 31, 0.6);
+}
+
+/* ── Chapter card ──────────────────────────────────────── */
+.chapter-card {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 45%, rgba(10, 24, 40, 0.82), rgba(3, 9, 16, 0.96)),
+    rgba(3, 9, 16, 0.9);
+  color: #fff;
+  animation: fade-in 0.5s ease both;
+}
+.chapter-card.is-leaving {
+  animation: chapter-out 0.48s ease forwards;
+}
+@keyframes chapter-out {
+  to {
+    opacity: 0;
+  }
+}
+.chapter-card__inner {
+  width: min(820px, 100%);
+  text-align: center;
+}
+.chapter-card__previously {
+  margin: 0 0 28px;
+  font-size: clamp(14px, 1.05vw, 17px);
+  color: rgba(255, 255, 255, 0.72);
+  animation: fade-in 0.6s ease 0.1s both;
+}
+.chapter-card__clock {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: #8fd3c4;
+  animation: fade-in 0.5s ease 0.2s both;
+}
+.chapter-card__hours {
+  display: inline-block;
+  min-width: 2ch;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.35em;
+}
+.chapter-card__title {
+  margin: 14px 0 0;
+  font: 600 clamp(42px, 5.4vw, 88px) / 1 var(--font-display);
+  letter-spacing: -0.03em;
+}
+.chapter-card__bridge {
+  margin: 20px auto 0;
+  max-width: 640px;
+  font: 500 clamp(18px, 1.6vw, 26px) / 1.4 var(--font-display);
+  color: rgba(255, 255, 255, 0.9);
+}
+.chapter-card__skip {
+  position: absolute;
+  right: calc(var(--stage-pad-x) + var(--safe-right));
+  bottom: calc(var(--stage-pad-bottom) + var(--safe-bottom));
+  min-width: 132px;
+  min-height: 48px;
+  padding: 0 24px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font: 700 15px var(--font-ui);
+  cursor: pointer;
+  animation: fade-in 0.4s ease 1.2s both;
+}
+.chapter-card__skip:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ── Mission map ───────────────────────────────────────── */
+.mission-dialog {
+  width: min(560px, 92vw);
+}
+.mission-dialog .doc-dialog__frame {
+  background: #0f1c2d;
+  color: #fff;
+}
+.mission {
+  padding: clamp(24px, 3vw, 36px);
+}
+.mission__kicker {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #8fd3c4;
+}
+.mission__title {
+  margin: 6px 0 18px;
+  font: 600 clamp(28px, 2.6vw, 38px) / 1.05 var(--font-display);
+}
+.mission__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.mission__stage {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+/* Centre the stage title's first line on the 30px dot (title line box ≈ 19.5px). */
+.mission__stage > span:last-child {
+  padding-top: 5px;
+}
+.mission__dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.75);
+}
+.mission__stage.is-done .mission__dot {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #fff;
+}
+.mission__stage.is-current .mission__dot {
+  background: #fff;
+  border-color: #fff;
+  color: var(--ink);
+}
+.mission__stage-title {
+  display: block;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.3;
+}
+.mission__stage.is-next .mission__stage-title {
+  color: rgba(255, 255, 255, 0.8);
+}
+.mission__here {
+  color: #8fd3c4;
+  font-weight: 600;
+}
+.mission__stage-text {
+  display: block;
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.7);
+}
+.mission__close {
+  margin-top: 22px;
+}
+
+/* ── Key facts view of a document ──────────────────────── */
+.doc-summary__kicker {
+  margin: 18px 0 8px !important;
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--delta-green);
+}
+.doc-summary .paper__title {
+  margin-bottom: 12px;
+}
+.doc-summary__photo {
+  margin: 4px 0 6px;
+}
+.doc-summary__facts {
+  list-style: none;
+  margin: 0 0 20px !important;
+  padding: 0 !important;
+  display: grid;
+  gap: 12px;
+}
+.doc-summary__facts li {
+  position: relative;
+  margin: 0 !important;
+  padding-left: 22px;
+  font-size: clamp(16px, 1.15vw, 18px);
+  line-height: 1.5;
+}
+.doc-summary__facts li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.62em;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--delta-green);
+}
+.paper--news .doc-summary__facts li {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+.doc-summary__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 20px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(16, 33, 57, 0.25);
+  background: #fff;
+  color: var(--ink);
+  font: 700 14.5px var(--font-ui);
+  cursor: pointer;
+}
+.doc-summary__more:hover {
+  background: #f3f5f7;
+}
+
+/* ── Evidence hints and expandable choices ─────────────── */
+.desk-folder__hint {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: calc(100% - 6px);
+  width: max-content;
+  max-width: min(240px, 60vw);
+  transform: translate(-50%, 6px);
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(8, 18, 31, 0.92);
+  color: #fff;
+  font: 500 13px/1.4 var(--font-ui);
+  text-align: center;
+  text-transform: none;
+  letter-spacing: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.desk-folder:hover .desk-folder__hint,
+.desk-folder:focus-visible .desk-folder__hint {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.desk-folder:nth-child(n + 4) .desk-folder__hint {
+  top: auto;
+  bottom: calc(100% - 6px);
+  transform: translate(-50%, -6px);
+}
+.desk-folder:nth-child(n + 4):hover .desk-folder__hint,
+.desk-folder:nth-child(n + 4):focus-visible .desk-folder__hint {
+  transform: translate(-50%, 0);
+}
+.choice-row__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.choice-row__full {
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink-soft);
+}
+
+/* ── Sign-in (Page 2) ──────────────────────────────────── */
+/* The form sits on its own glass panel so its small text never floats over the photograph. */
+.page02__form {
+  padding: 24px 28px 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--glass-dark-strong);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-modal);
+}
+.page02__sign {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+/* ── Loading on slow networks ──────────────────────────── */
+/* <picture> only chooses the file; the <img> inside keeps its own layout. */
+picture {
+  display: contents;
+}
+/* A tiny blurred preview holds the scene until the photo arrives, then the photo fades in. */
+.sim-stage__placeholder {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-repeat: no-repeat;
+  transform: scale(1.06);
+}
+.sim-stage__bg {
+  transition: opacity 0.5s ease;
+}
+.sim-stage__bg:not(.is-loaded) {
+  opacity: 0;
+}
+
+/* ── Photographed table documents (Page 4) ─────────────── */
+/* Shown straight on, never tilted or rotated: the page must read as a document, not a prop. */
+.table-photo {
+  display: block;
+  filter: drop-shadow(0 16px 26px rgba(4, 12, 22, 0.42));
+}
+.table-photo--folio {
+  padding: 6%;
+  border-radius: 10px;
+  background: linear-gradient(150deg, #2b2d31, #141517);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+.table-photo__sheet {
+  position: relative;
+  display: block;
+}
+.table-photo__sheet img {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+}
+.table-photo__title {
+  position: absolute;
+  right: 7%;
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #fff;
+  font: 700 clamp(6px, 0.62vw, 11px) / 1 var(--font-ui);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  /* One line, vertically centred in the header band whatever the sheet's size. */
+  display: flex;
+  align-items: center;
+}
+@media (max-width: 819px) {
+  /* Comfortable tap targets for the Board pack's evidence chips on phones. */
+  .pack-chip {
+    min-height: 44px;
+  }
+}
+.table-photo__stamp {
+  position: absolute;
+  right: 9%;
+  bottom: 8%;
+  margin: 0;
+  background: rgba(255, 255, 255, 0.65);
+  transform: rotate(-6deg);
+}
+.interactive-artifact:focus-visible .table-photo {
+  outline: 3px solid rgba(93, 177, 255, 0.9);
+  outline-offset: 4px;
+}
+
+/* Page 4 documents open on the photographed letterhead; text starts below its slate band. */
+.paper--letterhead {
+  padding-top: calc(7.6% + clamp(20px, 3vw, 36px));
+  background-color: #f4f1ea;
+  background-position: top center;
+  background-size: 100% auto;
+  background-repeat: no-repeat;
+}
+
+/* ── Board pack photo (Page 8) ─────────────────────────── */
+/* Desktop: the open leather portfolio photo is the frame. Tablets and phones keep the flat pack.
+   Column widths and padding follow the paper areas measured in boardpack_open.webp (1562 × 824):
+   leather 5.46% top, 5.83% bottom, 2.94% left, 3.07% right. The pack may be up to ~17% taller than the
+   photo's own proportions, so the working page has room for a whole section without scrolling. */
+@media (min-width: 1280px) and (min-height: 561px) {
+  .page08__pack.board-pack-hotspot {
+    --pack-w: 60vw;
+    --pack-h: min(calc(100dvh - 17vh - var(--stage-pad-bottom)), calc(var(--pack-w) / 1.62));
+    left: 36vw;
+    top: 17vh;
+    width: var(--pack-w);
+    height: var(--pack-h);
+  }
+  .page08__pack {
+    grid-template-columns: 35.34fr 7.62fr 51.03fr;
+    padding: calc(var(--pack-h) * 0.0546) calc(var(--pack-w) * 0.0307) calc(var(--pack-h) * 0.0583) calc(var(--pack-w) * 0.0294);
+    border: 0;
+    border-radius: 1.4% / 2.6%;
+    background: var(--pack-photo) center / 100% 100% no-repeat;
+  }
+  .page08__pack .pack-spine {
+    background: none;
+  }
+  .page08__pack .pack-page {
+    background: transparent;
+    border-radius: 2px;
+  }
+  .page08__pack .pack-page--tabs {
+    padding: 14px 16px;
+  }
+  .page08__pack .pack-org {
+    padding: 2px 2px 4px;
+    background: transparent;
+  }
+  .page08__pack .pack-tab {
+    background: #fff;
+  }
+  .page08__pack .pack-page--work {
+    padding: 14px 18px;
+    background: transparent;
+    box-shadow: none;
+  }
+  .page08__pack .pack-cover {
+    margin: -14px -18px;
+    height: calc(100% + 28px);
+    justify-content: flex-end;
+    padding: 0 8% 7%;
+    background: var(--pack-cover) center top / cover no-repeat;
+  }
+  .page08__pack .pack-cover__org svg {
+    display: none;
+  }
+}
+.pack-cover__locked {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.pack-cover__locked .pack-cover__stamp {
+  margin-top: 0;
+}
+.pack-cover__seal {
+  width: clamp(44px, 4vw, 66px);
+  height: auto;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.3));
+  animation: seal-press 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.25) 0.15s both;
+}
+@keyframes seal-press {
+  0% {
+    opacity: 0;
+    transform: scale(1.9) rotate(-14deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.94) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── DBA logo animation ────────────────────────────────── */
+.logo-sting {
+  display: block;
+  width: min(420px, 64vw);
+  height: auto;
+  aspect-ratio: 790 / 352;
+  margin: 0 auto;
+  pointer-events: none;
+  user-select: none;
+}
+.logo-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 24px;
+  background: radial-gradient(ellipse 70% 60% at 50% 45%, #0e1d2f 0%, #03090f 85%);
+  color: #fff;
+  animation: fade-in 0.35s ease both;
+}
+.logo-splash.is-leaving {
+  animation: chapter-out 0.6s ease forwards;
+}
+.logo-splash__mark {
+  width: min(620px, 82vw);
+}
+.logo-splash__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+  animation: fade-in 0.8s ease 2.2s both;
+}
+.chapter-card__sting {
+  width: min(300px, 58vw);
+  margin-bottom: 22px;
+}
+/* With the logo, the chapter text waits until the mark has built. */
+.chapter-card.has-sting .chapter-card__previously,
+.chapter-card.has-sting .chapter-card__clock {
+  animation: fade-in 0.5s ease var(--lead, 0ms) both;
+}
+.film-countdown__sting {
+  width: min(260px, 52vw);
+  margin-bottom: -6px;
+}
+
+/* If the browser will not start the film by itself, one clear button starts it (never a frozen frame). */
+.film__start {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 0 30px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  color: #0b1624;
+  font: 700 18px var(--font-ui);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  animation: fade-in 0.3s ease both;
+}
+.film__start svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ── Film countdown ────────────────────────────────────── */
+.film-countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  background: radial-gradient(ellipse 60% 60% at 50% 50%, #0f1f33 0%, #03080f 80%);
+  color: #fff;
+  text-align: center;
+  padding: 24px;
+}
+.film-countdown__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #8fd3c4;
+}
+.film-countdown__ring {
+  position: relative;
+  width: clamp(130px, 16vw, 190px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+.film-countdown__ring svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.film-countdown__track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 4;
+}
+.film-countdown__arc {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 327;
+  stroke-dashoffset: 327;
+}
+.film-countdown__arc.is-counting {
+  animation: countdown-arc 1s linear forwards;
+}
+.film-countdown__arc.is-loading {
+  stroke-dashoffset: 250;
+  transform-origin: 60px 60px;
+  animation: countdown-spin 1s linear infinite;
+}
+@keyframes countdown-arc {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes countdown-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.film-countdown__num {
+  font: 600 clamp(64px, 8vw, 104px) / 1 var(--font-display);
+  animation: countdown-num 1s var(--ease-out) both;
+}
+@keyframes countdown-num {
+  0% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.2;
+    transform: scale(0.9);
+  }
+}
+.film-countdown__loading {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.8);
+}
+.film-countdown__hint {
+  margin: 0;
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+/* ── Briefing (Page 02) ────────────────────────────────── */
+.briefing {
+  margin-top: 22px;
+  width: min(640px, 100%);
+}
+.briefing__card {
+  padding: 20px 24px 22px;
+}
+.briefing__steps {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+.briefing__steps i {
+  display: block;
+  width: 26px;
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.25);
+}
+.briefing__steps i.is-on {
+  background: #fff;
+}
+.briefing__kicker {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #8fd3c4;
+}
+.briefing__title {
+  margin: 6px 0 0;
+  font: 600 clamp(26px, 2.2vw, 36px) / 1.1 var(--font-display);
+}
+.briefing__text {
+  margin: 10px 0 0;
+  font-size: clamp(15px, 1.1vw, 18px);
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
+.briefing__facts {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.briefing__fact {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 14px;
+  align-items: start;
+}
+.briefing__fact-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--ink);
+}
+.briefing__fact-title {
+  display: block;
+  font-weight: 700;
+  font-size: 16px;
+}
+.briefing__fact-text {
+  display: block;
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.86);
+}
+.briefing .mission__list {
+  margin-top: 14px;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 18px;
+}
+.briefing__actions {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 20px;
+}
+
+@media (max-width: 819px) and (orientation: portrait) {
+  .briefing {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    width: auto;
+    max-height: 62dvh;
+    overflow-y: auto;
+    margin: 0;
+    border-radius: 24px;
+  }
+  .briefing .mission__list {
+    grid-template-columns: 1fr;
+  }
+  .stage-objective {
+    font-size: 14.5px;
+    margin-top: 10px;
+  }
+  .sim-stage__mission {
+    display: none;
+  }
+  .skip-intro {
+    bottom: max(20px, env(safe-area-inset-bottom));
+  }
+  .app:has(.sim-stage.is-intro) .caption-bar {
+    bottom: calc(max(20px, env(safe-area-inset-bottom)) + 60px);
+    width: calc(100vw - 24px);
+  }
+  .app:has(.sim-stage.is-intro) .caption-bar span {
+    font-size: 16px;
+  }
+  .chapter-card__skip {
+    right: 50%;
+    transform: translateX(50%);
+  }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .sim-stage__mission {
+    display: none;
+  }
+  .stage-objective {
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  .chapter-card__previously {
+    margin-bottom: 12px;
+  }
+  .chapter-card__title {
+    font-size: 40px;
+  }
+  .chapter-card__bridge {
+    font-size: 17px;
+    margin-top: 10px;
+  }
+}
