@@ -523,6 +523,10 @@
 .mic-btn:hover {
   background: #dce2e8;
 }
+.mic-btn.is-armed {
+  background: #dbe7f3;
+  color: #1f5f99;
+}
 .mic-btn.is-on {
   background: #f9dede;
   color: #ad3030;

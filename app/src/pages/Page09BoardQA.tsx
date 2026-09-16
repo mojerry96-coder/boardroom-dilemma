@@ -1,10 +1,11 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChatCircle, FileText, Newspaper, Pulse, Scales, Warning } from '@phosphor-icons/react';
 import { SCENES } from '../assets';
 import { usePageIntro } from '../components/Experience';
 import { useNarration, useSpeakOnce } from '../components/Narration';
 import { RadioPanel } from '../components/RadioPanel';
 import { Reveal, revealTiming, TYPE_SPEED, TypeText, useDelayed } from '../components/Reveal';
+import { SpeakerCard, useNarrow } from '../components/SpeakerCard';
 import { SimulationStage } from '../components/SimulationStage';
 import { OutcomePanel, PillButton, StageCopy, TextLink } from '../components/ui';
 import { VoiceField } from '../components/VoiceField';
@@ -101,6 +102,14 @@ export function Page09BoardQA() {
   };
 
   const speaker = stage === 'followups' ? Q2.speaker : question.speaker;
+  const narrow = useNarrow();
+  // Each Board member turns to the player once. The Director asks the follow-ups and the second question,
+  // so her later appearances start already facing the player instead of replaying the same beat.
+  const introduced = useRef(new Set<string>());
+  const firstAppearance = !heard && !introduced.current.has(speaker);
+  useEffect(() => {
+    introduced.current.add(speaker);
+  }, [speaker]);
   const questionText = stage === 'followups' ? followUps[followIndex]?.text ?? '' : question.question;
   // One key per question, so moving from answering to choosing does not retype it.
   const questionKey = stage === 'followups' ? `follow-${followIndex}` : ownKey;
@@ -197,10 +206,15 @@ export function Page09BoardQA() {
     <SimulationStage page={9} image={SCENES.boardQA} label="Board Q&A" wash="strong" intro={intro}>
       <StageCopy className="page09__copy" title={PAGE_META[9].title} subtitle={PAGE_META[9].subtitle} objective={OBJECTIVES[9]} intro={intro}>
         <figure className={`page09__question${stage === 'followups' ? ' is-follow' : ''}`} key={questionKey}>
-          <figcaption className="page09__speaker">{stage === 'followups' ? `${speaker} · Follow-up` : speaker}</figcaption>
+          <figcaption className="page09__speaker">
+            {narrow && <SpeakerCard key={questionKey} speaker={speaker} fresh={firstAppearance} compact />}
+            <span>{stage === 'followups' ? `${speaker} · Follow-up` : speaker}</span>
+          </figcaption>
           <TypeText as="blockquote" text={`“${questionText}”`} perChar={TYPE_SPEED.quote} delay={questionDelay} animate={!heard} />
         </figure>
       </StageCopy>
+      {/* The speaker steps forward as the question is asked (desktop and tablet; phones show an avatar by the name). */}
+      {!narrow && onStage && <SpeakerCard key={questionKey} speaker={speaker} fresh={firstAppearance} />}
       <Reveal show={intro.ready && heard} className="page09__response-zone" id="controls" as="section" aria-label="Your response">
         {zone}
       </Reveal>

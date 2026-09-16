@@ -421,6 +421,68 @@
   color: rgba(255, 255, 255, 0.86);
 }
 
+/* ── Speaker card (Page 9) ─────────────────────────────── */
+/* The person asking steps forward on the right, where the Board sits in the scene. */
+.speaker-card {
+  position: absolute;
+  z-index: 8;
+  right: calc(var(--stage-pad-x) + 2vw);
+  top: 17vh;
+  width: min(340px, 23vw);
+  margin: 0;
+  animation: speaker-pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+.speaker-card video,
+.speaker-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: #0b1624;
+  box-shadow: 0 24px 60px rgba(3, 13, 24, 0.55);
+}
+.speaker-card__name {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  padding: 7px 12px;
+  border-radius: var(--radius-pill);
+  background: rgba(8, 18, 31, 0.82);
+  color: #fff;
+  font: 700 11px / 1 var(--font-ui);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+@keyframes speaker-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* Phones: a small avatar beside the speaker's name. */
+.speaker-card--compact {
+  position: static;
+  flex: none;
+  width: 56px;
+  animation-duration: 0.4s;
+}
+.speaker-card--compact video,
+.speaker-card--compact img {
+  border-radius: 14px;
+  box-shadow: none;
+}
+.page09__speaker:has(.speaker-card) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 /* ── Loading on slow networks ──────────────────────────── */
 /* <picture> only chooses the file; the <img> inside keeps its own layout. */
 picture {

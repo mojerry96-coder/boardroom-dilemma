@@ -1,4 +1,4 @@
-import { DOC_PHOTOS, FILMS, FOLDER_ART, PORTRAIT_BACKDROPS, PORTRAITS, PROPS, SCENES, TABLE_SHEETS } from './assets';
+import { DOC_PHOTOS, FILMS, FOLDER_ART, PORTRAIT_BACKDROPS, PORTRAITS, PROPS, SCENES, SPEAKER_CLIPS, STAKEHOLDER_CLIPS, TABLE_SHEETS } from './assets';
 import { warm, warmPicture } from './media';
 import { ENDINGS, EXECUTIVE, NARRATION, Q1_COMPLIANCE, Q1_RELATIONSHIP, Q2, STAKEHOLDERS } from './sim/content';
 import { BRIEFING, CHAPTERS, GUIDE } from './sim/experience';
@@ -30,6 +30,7 @@ const PAGE_MEDIA: Record<number, PageMedia> = {
   5: { pictures: [SCENES.accountability.src], lines: [CHAPTERS[5].bridge, NARRATION.accountabilityLoad, GUIDE.newEvidence, GUIDE.reassess] },
   6: {
     pictures: [SCENES.regulator.src, ...Object.values(PORTRAITS).map((p) => p.src), ...Object.values(PORTRAIT_BACKDROPS).map((p) => p.src)],
+    images: Object.values(STAKEHOLDER_CLIPS).flatMap((clip) => [clip.start, clip.end]),
     lines: [CHAPTERS[6].bridge, NARRATION.stakeholdersLoad, ...STAKEHOLDERS.map((s) => s.line)],
   },
   7: {
@@ -44,6 +45,7 @@ const PAGE_MEDIA: Record<number, PageMedia> = {
   },
   9: {
     pictures: [SCENES.boardQA.src],
+    images: Object.values(SPEAKER_CLIPS).flatMap((clip) => [clip.start, clip.end]),
     lines: [CHAPTERS[9].bridge, GUIDE.qaLoad, Q1_RELATIONSHIP.question, Q1_COMPLIANCE.question, Q2.question, ...GUIDE.qaAnswered],
   },
   10: { pictures: [SCENES.outcome.src], lines: [CHAPTERS[10].bridge, ...Object.values(ENDINGS).map((e) => e.narration)] },

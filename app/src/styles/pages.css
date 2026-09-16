@@ -621,7 +621,8 @@
   box-shadow: 0 40px 90px rgba(3, 13, 24, 0.5);
   animation: artifact-in 0.45s var(--ease-out) both;
 }
-.page06__portrait img {
+.page06__portrait img,
+.page06__portrait video {
   display: block;
   width: 100%;
   height: 100%;
@@ -700,7 +701,9 @@
   .page06__memory-quote {
     display: none;
   }
-  /* Not enough height for four answers and the strip together: the strip returns once you've answered. */
+}
+/* The four answers (and the expanded one with Respond) need the height the strip sits in: it returns once you've answered. */
+@media (min-width: 820px) {
   .page06__memory.is-choosing {
     display: none;
   }

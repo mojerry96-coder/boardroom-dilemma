@@ -1,8 +1,11 @@
-import { useEffect, useId, useRef, useState } from 'react';
-import { MicIcon, StopIcon } from './Icons';
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
+import { MicIcon } from './Icons';
+import { useNarration } from './Narration';
 
 // Text field with optional speech input (master 4.3, content file section 14).
 // Typing always works; the transcript lands in the editable field; nothing auto-submits.
+// Voice is the default: a field starts listening when it appears (once the narrator has finished),
+// and the microphone button turns listening off everywhere until it is pressed again.
 // Browsers without speech recognition simply don't show the microphone. A server
 // TranscriptionProvider can be added later without changing this component's contract.
 
@@ -26,6 +29,39 @@ function getRecognition(): (new () => Recognition) | null {
   const w = window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
+
+const VOICE_PREF_KEY = 'boardroom-dilemma:voice-input';
+const prefListeners = new Set<() => void>();
+let voicePref = (() => {
+  try {
+    return localStorage.getItem(VOICE_PREF_KEY) !== 'off';
+  } catch {
+    return true;
+  }
+})();
+
+function setVoicePref(on: boolean) {
+  voicePref = on;
+  try {
+    localStorage.setItem(VOICE_PREF_KEY, on ? 'on' : 'off');
+  } catch {
+    /* storage unavailable — the choice lasts for this visit */
+  }
+  prefListeners.forEach((fn) => fn());
+}
+
+function useVoicePref() {
+  return useSyncExternalStore(
+    (fn) => {
+      prefListeners.add(fn);
+      return () => prefListeners.delete(fn);
+    },
+    () => voicePref,
+  );
+}
+
+/** Only one field listens at a time. */
+let listening: Recognition | null = null;
 
 interface VoiceFieldProps {
   label: string;
@@ -52,16 +88,31 @@ export function VoiceField({ label, value, onChange, placeholder, rows = 3, minC
   valueRef.current = value;
   const Ctor = getRecognition();
 
-  useEffect(() => () => rec.current?.stop(), []);
+  const voiceOn = useVoicePref();
+  const { speaking } = useNarration();
+  // Set when the browser refuses the microphone or keeps failing, so the field stops retrying on its own.
+  const [blocked, setBlocked] = useState(false);
+  const quickEnds = useRef(0);
+
+  useEffect(
+    () => () => {
+      if (listening === rec.current) listening = null;
+      rec.current?.stop();
+    },
+    [],
+  );
 
   const start = () => {
     if (!Ctor) return;
     setError(null);
+    if (listening && listening !== rec.current) listening.stop();
     const r = new Ctor();
+    const startedAt = Date.now();
     r.lang = 'en-GB';
     r.continuous = true;
     r.interimResults = true;
     r.onresult = (e) => {
+      quickEnds.current = 0;
       let finalText = '';
       let interimText = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -76,22 +127,54 @@ export function VoiceField({ label, value, onChange, placeholder, rows = 3, minC
       setInterim(interimText);
     };
     r.onerror = (e) => {
-      setError(e.error === 'not-allowed' ? 'Microphone permission was not granted. You can keep typing.' : 'Voice input stopped. You can keep typing.');
+      // Silence and our own stops are normal; listening simply resumes.
+      if (e.error === 'no-speech' || e.error === 'aborted') return;
+      setBlocked(true);
+      setError(e.error === 'not-allowed' || e.error === 'service-not-allowed' ? 'Microphone permission was not granted. You can keep typing.' : 'Voice input stopped. You can keep typing.');
     };
     r.onend = () => {
+      if (listening === r) listening = null;
+      if (Date.now() - startedAt < 1500 && ++quickEnds.current >= 3) setBlocked(true);
       setRecording(false);
       setInterim('');
     };
     rec.current = r;
     try {
       r.start();
+      listening = r;
       setRecording(true);
     } catch {
+      setBlocked(true);
       setError('Voice input is unavailable right now. You can keep typing.');
     }
   };
 
   const stop = () => rec.current?.stop();
+
+  // Listen by default, but never over the narrator (it would transcribe the voice-over).
+  const autoListen = voiceOn && !!Ctor && !disabled && !blocked && !speaking;
+  useEffect(() => {
+    if (!autoListen) {
+      if (recording) stop();
+      return;
+    }
+    if (recording) return;
+    const id = window.setTimeout(start, 350);
+    return () => window.clearTimeout(id);
+  }, [autoListen, recording]);
+
+  const toggle = () => {
+    if (recording || voiceOn) {
+      setVoicePref(false);
+      setError(null);
+      stop();
+    } else {
+      setBlocked(false);
+      quickEnds.current = 0;
+      setVoicePref(true);
+    }
+  };
+
   const count = value.trim().length;
   const short = minChars !== undefined && count < minChars;
 
@@ -113,12 +196,13 @@ export function VoiceField({ label, value, onChange, placeholder, rows = 3, minC
         {Ctor && !disabled && (
           <button
             type="button"
-            className={`mic-btn${recording ? ' is-on' : ''}`}
-            aria-pressed={recording}
-            aria-label={recording ? 'Stop voice input' : 'Speak your answer'}
-            onClick={recording ? stop : start}
+            className={`mic-btn${recording ? ' is-on' : voiceOn && !blocked ? ' is-armed' : ''}`}
+            aria-pressed={voiceOn}
+            aria-label={voiceOn ? 'Voice input on — turn it off' : 'Voice input off — speak your answer'}
+            title={voiceOn ? 'Turn voice input off' : 'Turn voice input on'}
+            onClick={toggle}
           >
-            {recording ? <StopIcon size={16} /> : <MicIcon />}
+            <MicIcon off={!voiceOn} />
           </button>
         )}
       </div>
@@ -129,7 +213,8 @@ export function VoiceField({ label, value, onChange, placeholder, rows = 3, minC
           </span>
         )}
         {error && <span className="field-error">{error}</span>}
-        {!recording && !error && hint && <span>{hint}</span>}
+        {!recording && !error && voiceOn && speaking && Ctor && !disabled && <span>Voice is on. Listening starts when the narrator finishes.</span>}
+        {!recording && !error && !(voiceOn && speaking && Ctor && !disabled) && hint && <span>{hint}</span>}
         {minChars !== undefined && (
           <span className={`char-count${short ? ' is-short' : ''}`}>{short ? `${minChars - count} more characters needed` : 'Enough detail'}</span>
         )}

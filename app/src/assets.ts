@@ -167,6 +167,42 @@ export const LOGO_STING = {
   buildMs: 2600,
 };
 
+const speakerMedia = (file: string) => `${base}speakers/${file}`;
+
+export interface SpeakerClip {
+  /** Name tag on the card, when the full title is too long for it. */
+  label?: string;
+  /** Short silent presence beat (about 3–5s). */
+  video: string;
+  /** First frame, shown while the clip loads. */
+  start: string;
+  /** Final frame (looking at the player), shown on return visits and with reduced motion. */
+  end: string;
+}
+
+/** On-screen presence for characters who question the player, keyed by the speaker name used in content.ts. */
+export const SPEAKER_CLIPS: Record<string, SpeakerClip> = {
+  'Board Chair': {
+    video: speakerMedia('board_chair.mp4'),
+    start: speakerMedia('board_chair_start.webp'),
+    end: speakerMedia('board_chair_end.webp'),
+  },
+  'Independent Non-Executive Director': {
+    label: 'Independent Director',
+    video: speakerMedia('independent_director.mp4'),
+    start: speakerMedia('independent_director_start.webp'),
+    end: speakerMedia('independent_director_end.webp'),
+  },
+};
+
+/** Page 6: each stakeholder's short silent presence beat, played as their recorded line begins. */
+export const STAKEHOLDER_CLIPS: Record<StakeholderId, SpeakerClip> = {
+  regulator: { video: speakerMedia('regulator.mp4'), start: speakerMedia('regulator_start.webp'), end: speakerMedia('regulator_end.webp') },
+  employee: { video: speakerMedia('employee.mp4'), start: speakerMedia('employee_start.webp'), end: speakerMedia('employee_end.webp') },
+  journalist: { video: speakerMedia('journalist.mp4'), start: speakerMedia('journalist_start.webp'), end: speakerMedia('journalist_end.webp') },
+  family: { video: speakerMedia('family.mp4'), start: speakerMedia('family_start.webp'), end: speakerMedia('family_end.webp') },
+};
+
 const prop = (file: string) => `${base}props/${file}`;
 
 /** Photographed props for Pages 4 and 8 (media/originals/new 2, cut out and optimised). */

@@ -1,8 +1,9 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { Quotes } from '@phosphor-icons/react';
-import { PORTRAIT_BACKDROPS, PORTRAITS, SCENES } from '../assets';
+import { PORTRAIT_BACKDROPS, PORTRAITS, SCENES, STAKEHOLDER_CLIPS } from '../assets';
 import { usePageIntro } from '../components/Experience';
 import { Picture } from '../components/Picture';
+import { PresenceClip } from '../components/SpeakerCard';
 import { useSpeakOnce } from '../components/Narration';
 import { revealTiming, TYPE_SPEED, TypeText, useDelayed } from '../components/Reveal';
 import { SimulationStage } from '../components/SimulationStage';
@@ -61,15 +62,21 @@ export function Page06Stakeholders() {
       wash="strong"
       intro={intro}
       backdrop={
-        !isRegulator ? (
-          <figure className="page06__portrait" key={active.id}>
-            <Picture
-              src={PORTRAITS[active.id as Exclude<StakeholderId, 'regulator'>].src}
-              alt={PORTRAITS[active.id as Exclude<StakeholderId, 'regulator'>].alt}
-              sizes="(max-width: 819px) 100vw, 40vw"
-            />
+        // The stakeholder holds still until their line begins, then moves once and keeps looking at the player.
+        isRegulator ? (
+          <PresenceClip
+            key={active.id}
+            className="sim-stage__bg is-loaded page06__scene-clip"
+            style={{ objectPosition: SCENES.regulator.position }}
+            clip={STAKEHOLDER_CLIPS.regulator}
+            play={onStage && !answer}
+            still={!!answer}
+          />
+        ) : (
+          <figure className="page06__portrait" key={active.id} role="img" aria-label={PORTRAITS[active.id as Exclude<StakeholderId, 'regulator'>].alt}>
+            <PresenceClip clip={STAKEHOLDER_CLIPS[active.id]} play={onStage && !answer} still={!!answer} />
           </figure>
-        ) : undefined
+        )
       }
     >
       <StageCopy className="page06__copy" eyebrow={BRAND.eyebrow} title={PAGE_META[6].title} subtitle={SUBTITLE} objective={OBJECTIVES[6]} intro={intro}>

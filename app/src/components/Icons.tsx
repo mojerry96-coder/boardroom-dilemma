@@ -1,6 +1,7 @@
 import {
   Lock,
   Microphone,
+  MicrophoneSlash,
   MusicNotes,
   MusicNotesMinus,
   Pause,
@@ -22,7 +23,7 @@ export const PauseIcon = (p: IconProps) => <Pause weight="fill" {...p} />;
 export const SkipIcon = (p: IconProps) => <SkipForward {...p} />;
 export const StopIcon = (p: IconProps) => <Stop weight="fill" {...p} />;
 export const LockIcon = (p: IconProps) => <Lock {...p} />;
-export const MicIcon = (p: IconProps) => <Microphone {...p} />;
+export const MicIcon = ({ off, ...p }: IconProps & { off?: boolean }) => (off ? <MicrophoneSlash {...p} /> : <Microphone {...p} />);
 
 export const VolumeIcon = ({ muted, ...p }: IconProps & { muted?: boolean }) => (muted ? <SpeakerSlash {...p} /> : <SpeakerHigh {...p} />);
 
