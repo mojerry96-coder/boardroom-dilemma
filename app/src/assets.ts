@@ -203,6 +203,21 @@ export const STAKEHOLDER_CLIPS: Record<StakeholderId, SpeakerClip> = {
   family: { video: speakerMedia('family.mp4'), start: speakerMedia('family_start.webp'), end: speakerMedia('family_end.webp') },
 };
 
+/** Page 7: the executive waits for the player's answer. Starts on the corridor film's final frame. */
+export const EXECUTIVE_WAIT: SpeakerClip = {
+  video: speakerMedia('executive_wait.mp4'),
+  start: speakerMedia('executive_wait_start.webp'),
+  end: speakerMedia('executive_wait_end.webp'),
+};
+
+/** Page 7: each reaction film's final frame, held behind the outcome. */
+export const EXECUTIVE_BRANCH_END: Record<Opt, string> = {
+  A: film('executive_branch_a_end.webp'),
+  B: film('executive_branch_b_end.webp'),
+  C: film('executive_branch_c_end.webp'),
+  D: film('executive_branch_d_end.webp'),
+};
+
 const prop = (file: string) => `${base}props/${file}`;
 
 /** Photographed props for Pages 4 and 8 (media/originals/new 2, cut out and optimised). */

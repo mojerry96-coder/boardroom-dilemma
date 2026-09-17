@@ -84,6 +84,7 @@ export function VoiceField({ label, value, onChange, placeholder, rows = 3, minC
   const [interim, setInterim] = useState('');
   const [error, setError] = useState<string | null>(null);
   const rec = useRef<Recognition | null>(null);
+  const field = useRef<HTMLTextAreaElement>(null);
   const valueRef = useRef(value);
   valueRef.current = value;
   const Ctor = getRecognition();
@@ -152,7 +153,21 @@ export function VoiceField({ label, value, onChange, placeholder, rows = 3, minC
   const stop = () => rec.current?.stop();
 
   // Listen by default, but never over the narrator (it would transcribe the voice-over).
-  const autoListen = voiceOn && !!Ctor && !disabled && !blocked && !speaking;
+  // …and only once the field has actually appeared (fields can mount while still fading in, or off-screen).
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (shown) return;
+    const id = window.setInterval(() => {
+      const el = field.current as (HTMLTextAreaElement & { checkVisibility?: (o: object) => boolean }) | null;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const onScreen = r.width > 0 && r.bottom > 0 && r.top < window.innerHeight;
+      const visible = el.checkVisibility ? el.checkVisibility({ opacityProperty: true, visibilityProperty: true }) : true;
+      if (onScreen && visible && Number(getComputedStyle(el.closest('.reveal') ?? el).opacity) > 0.9) setShown(true);
+    }, 300);
+    return () => window.clearInterval(id);
+  }, [shown]);
+  const autoListen = shown && voiceOn && !!Ctor && !disabled && !blocked && !speaking;
   useEffect(() => {
     if (!autoListen) {
       if (recording) stop();
@@ -185,6 +200,7 @@ export function VoiceField({ label, value, onChange, placeholder, rows = 3, minC
       </label>
       <div className="voice-field__box">
         <textarea
+          ref={field}
           id={id}
           rows={rows}
           value={value}

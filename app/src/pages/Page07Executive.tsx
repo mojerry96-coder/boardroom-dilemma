@@ -1,10 +1,11 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { ChatCircle, Clock, Shield, Users } from '@phosphor-icons/react';
-import { FILMS, SCENES } from '../assets';
+import { EXECUTIVE_BRANCH_END, EXECUTIVE_WAIT, FILMS, SCENES } from '../assets';
 import { useExperience } from '../components/Experience';
 import { FilmPlayer } from '../components/FilmPlayer';
 import { useNarration } from '../components/Narration';
 import { revealTiming, type PageIntro } from '../components/Reveal';
+import { PresenceClip } from '../components/SpeakerCard';
 import { OBJECTIVES } from '../sim/experience';
 import { SimulationStage } from '../components/SimulationStage';
 import { OutcomePanel, PillButton, StageCopy, TextLink } from '../components/ui';
@@ -48,7 +49,20 @@ export function Page07Executive() {
 
   return (
     <>
-      <SimulationStage page={7} image={SCENES.executive} label="Executive Pressure" wash="strong">
+      <SimulationStage
+        page={7}
+        image={SCENES.executive}
+        label="Executive Pressure"
+        wash="strong"
+        backdrop={
+          // The page picks up where the film left off: he waits for your answer, then the scene holds on his reaction.
+          phase === 'choose' ? (
+            <PresenceClip key="wait" className="sim-stage__bg is-loaded page07__scene-clip" clip={EXECUTIVE_WAIT} play still={false} />
+          ) : phase === 'done' && chosen ? (
+            <img key={`end-${chosen}`} className="sim-stage__bg is-loaded page07__scene-clip" src={EXECUTIVE_BRANCH_END[chosen]} alt="" decoding="async" />
+          ) : undefined
+        }
+      >
         {phase !== 'setup' && phase !== 'branch' && (
           <StageCopy className="page07__copy" eyebrow={BRAND.eyebrow} title={PAGE_META[7].title} subtitle={SUBTITLE} objective={OBJECTIVES[7]} intro={intro}>
             <div id="controls">

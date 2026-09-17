@@ -26,16 +26,24 @@ interface NarrationValue extends Prefs {
   speakOnly: (text: string, onDone?: () => void) => void;
 }
 
-const PREFS_KEY = 'boardroom-dilemma:prefs';
+// v2: captions became opt-in. Audio and music choices carry over from the earlier key; captions start off.
+const PREFS_KEY = 'boardroom-dilemma:prefs:v2';
+const LEGACY_PREFS_KEY = 'boardroom-dilemma:prefs';
+const DEFAULT_PREFS: Prefs = { audio: true, captions: false, music: true };
 
 function loadPrefs(): Prefs {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
-    if (raw) return { audio: true, captions: true, music: true, ...(JSON.parse(raw) as Partial<Prefs>) };
+    if (raw) return { ...DEFAULT_PREFS, ...(JSON.parse(raw) as Partial<Prefs>) };
+    const legacy = localStorage.getItem(LEGACY_PREFS_KEY);
+    if (legacy) {
+      const { audio, music } = JSON.parse(legacy) as Partial<Prefs>;
+      return { ...DEFAULT_PREFS, ...(audio !== undefined && { audio }), ...(music !== undefined && { music }) };
+    }
   } catch {
     /* ignore */
   }
-  return { audio: true, captions: true, music: true };
+  return DEFAULT_PREFS;
 }
 
 const NarrationContext = createContext<NarrationValue | null>(null);

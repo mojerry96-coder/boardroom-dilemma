@@ -1,4 +1,4 @@
-import { DOC_PHOTOS, FILMS, FOLDER_ART, PORTRAIT_BACKDROPS, PORTRAITS, PROPS, SCENES, SPEAKER_CLIPS, STAKEHOLDER_CLIPS, TABLE_SHEETS } from './assets';
+import { DOC_PHOTOS, EXECUTIVE_BRANCH_END, EXECUTIVE_WAIT, FILMS, FOLDER_ART, PORTRAIT_BACKDROPS, PORTRAITS, PROPS, SCENES, SPEAKER_CLIPS, STAKEHOLDER_CLIPS, TABLE_SHEETS } from './assets';
 import { warm, warmPicture } from './media';
 import { ENDINGS, EXECUTIVE, NARRATION, Q1_COMPLIANCE, Q1_RELATIONSHIP, Q2, STAKEHOLDERS } from './sim/content';
 import { BRIEFING, CHAPTERS, GUIDE } from './sim/experience';
@@ -35,7 +35,7 @@ const PAGE_MEDIA: Record<number, PageMedia> = {
   },
   7: {
     pictures: [SCENES.executive.src],
-    images: FILMS.executiveSetup?.poster ? [FILMS.executiveSetup.poster] : [],
+    images: [...(FILMS.executiveSetup?.poster ? [FILMS.executiveSetup.poster] : []), EXECUTIVE_WAIT.start, EXECUTIVE_WAIT.end, ...Object.values(EXECUTIVE_BRANCH_END)],
     lines: [CHAPTERS[7].bridge, ...Object.values(EXECUTIVE.bridge)],
   },
   8: {

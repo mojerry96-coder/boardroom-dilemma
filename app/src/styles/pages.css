@@ -710,6 +710,11 @@
 }
 
 /* ── Page 07 — Executive Pressure ──────────────────────── */
+/* Continues straight from the film's last frame, so it neither zooms nor fades in. */
+.page07__scene-clip {
+  animation: none;
+  object-position: 60% 40%;
+}
 .page07__copy {
   width: min(580px, 35vw);
 }
