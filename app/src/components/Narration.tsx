@@ -196,7 +196,8 @@ export function NarrationProvider({ children }: { children: ReactNode }) {
         onDone?.();
       };
       speak(text, finish);
-      if (onDone) window.setTimeout(finish, Math.max(4000, text.split(/\s+/).length * 520));
+      // Safety net only (the recording normally reports its own end): generous, so it never cuts in early.
+      if (onDone) window.setTimeout(finish, Math.max(5000, text.split(/\s+/).length * 650 + 2500));
     },
     [silence, speak],
   );

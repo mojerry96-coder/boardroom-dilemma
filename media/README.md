@@ -44,11 +44,24 @@ All narration uses one voice: ElevenLabs "Victor Hopo – Narrative African Voic
 | The Regulator (FISCA) | Ugochukwu – middle-aged Igbo-accented male (`nw6EIXCsQ89uJMjytYb8`) | `char_regulator` |
 | Employee Representative | Olaniyi Victor – Lagos accent (`U7wWSnxIJwCjioxt86mk`) | `char_employee` |
 | Journalist | Olufunmilola – Nigerian female, Yoruba (`9Dbo4hEvXQ5l7MXGZFQA`) | `char_journalist` |
-| Victim's mother | sim-boardroom-mother – designed (`4uMFVSAo1hQ9m0GtVHf0`) | `char_family` |
+| Victim's mother | sim-boardroom-mother-v2 – designed older Nigerian woman (`t5l2oSG9hRTK1yVZR86k`), `eleven_v3` | `char_family` |
 | Board Chair | Uyi – middle-aged male (`NwBN5lRnglDs8TBVmser`) | `qa_q1_relationship`, `qa_q1_compliance` |
 | Independent Non-Executive Director | sim-boardroom-ined – designed (`Fbxk6DvbU2AJfKkTfARU`) | `qa_q2` plus every follow-up variant (`qa_mismatch_*`, `qa_single_*`, `qa_singlezero_*`) |
 
+### Emergency Board call (Page 4, `audio/call/`)
+
+A pre-mixed call in `app/public/call/crisis_call.{webm,mp3}`, with camera-off profile photos `avatar_*.webp`. `audio/call/build_call.py` trims the lines in `audio/call/lines/`, sets the timing (including interruptions and the muted moment), mixes the track and writes the cue timings copied into `app/src/sim/crisisCall.ts`. Recorded with `eleven_v3`, stability 0.5.
+
+| Speaker | ElevenLabs voice |
+| --- | --- |
+| Board Chair | Uyi (`NwBN5lRnglDs8TBVmser`) |
+| Independent Director | sim-boardroom-ined (`Fbxk6DvbU2AJfKkTfARU`) |
+| Managing Director | sim-boardroom-md – designed (`FxGawZyHOnLEtD4jik9x`) |
+| Chidi Okafor | sim-boardroom-okafor – designed (`pQ8wletSSWpzUEhW9Hkm`) |
+
 The Board follow-ups are filled in from the learner's diagnosis, so each reachable wording is recorded separately. Their file names are built from lever codes: `ag`, `st`, `sr`. `app/src/voice.test.ts` fails if any mapped line is missing its file.
+
+Character lines are used as recorded: never sped up, slowed down or stripped of pauses. `normalise_voice.py` rebuilds `app/public/voice` from the untouched recordings (edge silence trimmed, -16 LUFS, -1.5 dBTP, MP3 160k and Opus 64k). The earlier retimed files are in `audio/voice_backup_20260918/`. Bump `VERSION` in `app/public/sw.js` whenever files are replaced under the same names.
 
 ## Rebuilding the films
 
@@ -82,7 +95,7 @@ The intro runs through these segments in order:
 
 ### Executive branches
 
-Each branch opens on a hold of `exec_setup2_last.png` while the learner's reply shows as a caption. The reply is never voiced. Chidi's reaction clip follows.
+Each branch starts on Chidi himself, half a second before he answers (`LEAD_IN`), so his reaction follows the learner's choice at once. The learner's reply is never voiced or replayed.
 
 Speech timings are hard-coded in `BRANCH_CUT` from `silencedetect`. Branch D drops its first 1.9s, where the model voiced an unwanted paraphrase of the learner's line. Re-measure these timings if you replace a clip.
 

@@ -2,7 +2,7 @@
 // Hashed app files are cache-first. Photos, props, voice and fonts are served from cache and refreshed in
 // the background. Films stream with range requests, so they always go to the network.
 
-const VERSION = 'bd-v1';
+const VERSION = 'bd-v2'; // Bump when voice, photos or captions are replaced under the same file names.
 const CACHE = `${VERSION}-media`;
 
 self.addEventListener('install', () => self.skipWaiting());

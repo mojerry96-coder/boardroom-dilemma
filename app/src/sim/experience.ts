@@ -14,7 +14,7 @@ export interface Chapter {
 
 export const CHAPTERS: Record<number, Chapter> = {
   2: { hoursLeft: 72, title: 'Your Role', bridge: 'Before the Board meets, you need to understand your place in this story.' },
-  3: { hoursLeft: 70, title: 'The Evidence Desk', bridge: 'Every defensible answer starts in the same place — with the record.', sting: true },
+  3: { hoursLeft: 70, title: 'The Evidence Desk', bridge: 'Every defensible answer starts in the same place: with the record.', sting: true },
   4: { hoursLeft: 64, title: 'The Crisis Decision', bridge: 'You know what the records show. Now the Board needs a position.' },
   5: { hoursLeft: 52, title: 'Accountability', bridge: 'A position is not a diagnosis. Where does responsibility really lie?' },
   6: { hoursLeft: 40, title: 'Stakeholder Pressure', bridge: 'Outside the boardroom, people are already asking questions.', sting: true },
@@ -33,7 +33,7 @@ export const OBJECTIVES: Record<number, string> = {
   6: 'Your task: answer four stakeholders. Each will remember what you promise.',
   7: 'Your task: decide how to answer the Group Commercial Director.',
   8: 'Your task: build the four sections of your Board case, then lock it.',
-  9: "Your task: answer the Board's questions — in your own words, then with the reasoning closest to them.",
+  9: "Your task: answer the Board's questions in your own words, then with the reasoning closest to them.",
   10: "See how the Board's decision played out, then review the journey that led here.",
 };
 
@@ -64,7 +64,7 @@ export const BRIEFING = {
     {
       kicker: 'What you will do',
       title: 'Seventy-two hours to the Board',
-      text: 'Eight stages. Every decision carries forward — and the Board will test all of them.',
+      text: 'Eight stages. Every decision carries forward, and the Board will test all of them.',
     },
   ],
   facts: [
@@ -113,7 +113,7 @@ export const GUIDE = {
 
 /** One-line hint shown when a folder is hovered or focused. */
 export const EVIDENCE_HINT: Record<EvidenceId, string> = {
-  incident: 'The fatal incident on 1 June — what the first inspection found.',
+  incident: 'The fatal incident on 1 June: what the first inspection found.',
   nearMiss: 'Four months earlier, the same interlock failed to stop the line.',
   payments: 'Fourteen months of “expediting fees” through one agent.',
   correspondence: "The Regional Director's email about what goes in writing.",

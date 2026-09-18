@@ -39,7 +39,9 @@ export function FilmPlayer({ title, cues, video, onEnd, skipLabel = 'Skip', coun
   // 720p by default; the 480p rendition on slow connections or once the 720p film has struggled.
   const [useLow, setUseLow] = useState(isConstrainedNetwork);
   const src = video ? (useLow && video.low ? video.low : video.src) : undefined;
-  const counting = count > 0 || (!canPlay && !waitedTooLong);
+  // Only a film opened with a countdown waits behind the loader. One that should start at once (a reaction
+  // to the player's choice, a replay) shows its poster frame and begins as soon as it can play.
+  const counting = count > 0 || (countdown > 0 && !canPlay && !waitedTooLong);
 
   useEffect(() => {
     if (count <= 0) return;
@@ -211,7 +213,7 @@ export function FilmPlayer({ title, cues, video, onEnd, skipLabel = 'Skip', coun
           }}
           playsInline
           preload="auto"
-          onCanPlayThrough={() => setCanPlay(true)}
+          onCanPlay={() => setCanPlay(true)}
           onEnded={finish}
           onPause={() => setPlaying(false)}
           onPlay={() => {
@@ -234,7 +236,7 @@ export function FilmPlayer({ title, cues, video, onEnd, skipLabel = 'Skip', coun
         </div>
       )}
 
-      {!video && <p className="film__tag">Storyboard preview — final film in production</p>}
+      {!video && <p className="film__tag">Storyboard preview. Final film in production</p>}
       {captions && live && (
         <p className="film__caption" aria-hidden="true">
           {live.speaker && <span className="film__speaker">{live.speaker}</span>}

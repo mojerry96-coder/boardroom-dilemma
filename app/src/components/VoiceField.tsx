@@ -214,7 +214,7 @@ export function VoiceField({ label, value, onChange, placeholder, rows = 3, minC
             type="button"
             className={`mic-btn${recording ? ' is-on' : voiceOn && !blocked ? ' is-armed' : ''}`}
             aria-pressed={voiceOn}
-            aria-label={voiceOn ? 'Voice input on — turn it off' : 'Voice input off — speak your answer'}
+            aria-label={voiceOn ? 'Voice input on. Turn it off' : 'Voice input off. Speak your answer'}
             title={voiceOn ? 'Turn voice input off' : 'Turn voice input on'}
             onClick={toggle}
           >
@@ -225,7 +225,7 @@ export function VoiceField({ label, value, onChange, placeholder, rows = 3, minC
       <div id={`${id}-help`} className="voice-field__help">
         {recording && (
           <span className="rec-indicator">
-            <span className="rec-dot" aria-hidden="true" /> Listening{interim ? ` — ${interim}` : '…'}
+            <span className="rec-dot" aria-hidden="true" /> Listening{interim ? `: ${interim}` : '…'}
           </span>
         )}
         {error && <span className="field-error">{error}</span>}

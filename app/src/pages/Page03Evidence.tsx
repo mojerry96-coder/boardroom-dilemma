@@ -63,7 +63,8 @@ export function Page03Evidence() {
   };
 
   const onFolder = (id: EvidenceId) => {
-    if (!entered) return;
+    // A folder clicked before entering starts the review too (and opens it, if it is the first step).
+    if (!entered) setEntered(true);
     if (stateOf(id) === 'locked') {
       dispatch({ type: 'EVIDENCE_BLOCKED' });
       setBlocked(true);
@@ -89,10 +90,11 @@ export function Page03Evidence() {
       <SimulationStage page={3} image={SCENES.desk} label="Evidence Desk" className="page03" intro={intro}>
         <StageCopy className="page03__intro" eyebrow={BRAND.eyebrow} title={PAGE_META[3].title} subtitle={SUBTITLE} objective={OBJECTIVES[3]} intro={intro}>
           {!entered ? (
-            <div className="stage-actions">
-              <PillButton icon={<FolderOpen size={22} />} onClick={enter}>
+            <div className="stage-actions page03__start">
+              <PillButton className="is-calling" icon={<FolderOpen size={22} />} onClick={enter}>
                 Enter the Evidence Desk
               </PillButton>
+              <p className="page03__start-hint">Start here. The five folders unlock, one step at a time, once you enter.</p>
             </div>
           ) : (
             <div className="page03__status" id="controls">

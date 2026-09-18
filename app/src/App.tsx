@@ -56,7 +56,7 @@ export default function App() {
   // Every arrival on a page (including resuming a saved run) opens with its chapter card.
   useLayoutEffect(() => {
     if (!ready) return;
-    document.title = `${PAGE_META[sim.page].title} — The Boardroom Dilemma`;
+    document.title = `${PAGE_META[sim.page].title} · The Boardroom Dilemma`;
     if (lastPage.current === sim.page) return;
     const first = lastPage.current === null;
     lastPage.current = sim.page;

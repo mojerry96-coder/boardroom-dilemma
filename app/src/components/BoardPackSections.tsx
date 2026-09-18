@@ -90,7 +90,7 @@ export function LensSection({ sim, update, toggleLens, onDone, readOnly }: Secti
       <div className="pack-section">
         <SectionHead n={2} title={UI.caseLensJustify(lensIndex + 1, title(id))} hint={BOARD_CASE_COPY.lensPrompt} />
         <p className="pack-ref">
-          Your framing: {sim.boardFraming ? FRAMING.short[sim.boardFraming] : '—'} · Self-report: {sim.selfReportDecision ? SELF_REPORT.short[sim.selfReportDecision] : '—'}
+          Your framing: {sim.boardFraming ? FRAMING.short[sim.boardFraming] : 'not set'} · Self-report: {sim.selfReportDecision ? SELF_REPORT.short[sim.selfReportDecision] : 'not set'}
         </p>
         <VoiceField
           key={id}

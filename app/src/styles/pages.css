@@ -178,7 +178,37 @@
   animation-delay: 0.2s;
 }
 .page03__desk.is-closed .desk-folder {
-  cursor: default;
+  cursor: pointer;
+}
+/* Before the review starts: the way in is the button, so it calls for attention. */
+.page03__start {
+  flex-wrap: wrap;
+}
+.page03__start .is-calling {
+  animation: start-call 2.2s ease-in-out 1.2s infinite;
+}
+@keyframes start-call {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.55);
+  }
+  55% {
+    box-shadow: 0 0 0 14px rgba(255, 255, 255, 0);
+  }
+}
+.page03__start-hint {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 10px rgba(5, 14, 25, 0.5);
+  animation: fade-in 0.4s ease 0.6s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page03__start .is-calling {
+    animation: none;
+  }
 }
 .page03__desk.is-open .desk-folder:hover:not(.is-locked),
 .page03__desk.is-open .desk-folder:focus-visible {
@@ -550,7 +580,7 @@
 
 /* ── Page 06 — Stakeholder Pressure ────────────────────── */
 .page06__copy {
-  width: min(580px, 35vw);
+  width: min(560px, 36vw);
 }
 .page06__quote {
   margin-top: 22px;
@@ -609,12 +639,13 @@
   margin-top: 12px;
 }
 .page06__portrait {
+  /* The character zone: the right ~58% of the stage. The card sits centred in it, clear of the question and answers. */
   position: absolute;
   z-index: -1;
-  right: 7vw;
+  right: calc((58vw - min(40vw, 700px)) / 2);
   top: 13vh;
   bottom: 9vh;
-  width: min(36vw, 620px);
+  width: min(40vw, 700px);
   margin: 0;
   border-radius: 24px;
   overflow: hidden;
@@ -628,6 +659,12 @@
   height: 100%;
   object-fit: cover;
   object-position: center 22%;
+  background: #0b1624;
+}
+/* The regulator's office scene, cropped to him and the FISCA emblem. */
+.page06__portrait--scene img,
+.page06__portrait--scene video {
+  object-position: 65% 40%;
 }
 .page06__memory {
   position: absolute;
@@ -711,6 +748,13 @@
 
 /* ── Page 07 — Executive Pressure ──────────────────────── */
 /* Continues straight from the film's last frame, so it neither zooms nor fades in. */
+.page07__copy #controls {
+  transition: opacity 0.18s ease;
+}
+.page07__copy #controls:has(.is-leaving) {
+  opacity: 0;
+  pointer-events: none;
+}
 .page07__scene-clip {
   animation: none;
   object-position: 60% 40%;
@@ -1109,74 +1153,6 @@
 /* ── Page 09 — Board Q&A ───────────────────────────────── */
 .page09__copy {
   width: min(780px, 47vw);
-}
-.page09__question {
-  margin: 20px 0 0;
-  max-width: 660px;
-  padding-left: 18px;
-  border-left: 3px solid rgba(255, 255, 255, 0.72);
-  animation: fade-up 0.36s var(--ease-out) both;
-}
-.page09__question.is-follow {
-  border-left-color: #f5d49a;
-}
-.page09__speaker {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.9);
-}
-.page09__question.is-follow .page09__speaker {
-  color: #f5d49a;
-}
-.page09__question blockquote {
-  margin: 0;
-  font: 500 clamp(21px, 1.65vw, 28px) / 1.26 var(--font-display);
-  color: #fff;
-  text-shadow: 0 2px 20px rgba(5, 14, 25, 0.55);
-}
-.page09__response-zone {
-  position: absolute;
-  z-index: 10;
-  left: var(--stage-pad-x);
-  bottom: 7.2vh;
-  width: min(760px, 48vw);
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-}
-.page09__chips {
-  margin-top: 16px;
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.page09__chip-detail {
-  margin: 10px 0 0;
-  align-self: flex-start;
-  padding: 8px 14px;
-  border-radius: 12px;
-  background: rgba(8, 22, 39, 0.8);
-  color: #fff;
-  font-size: 14px;
-  animation: fade-in 0.2s ease;
-}
-.page09__next {
-  margin-top: 16px;
-}
-.page09__sheet {
-  padding: 18px 20px;
-  animation: fade-up 0.32s var(--ease-out) both;
-}
-.page09__sheet .panel-title {
-  font-size: 18px;
-}
-.page09__follow {
-  padding: 18px 20px;
-  align-self: flex-start;
-  animation: fade-up 0.32s var(--ease-out) both;
 }
 
 /* ── Page 10 — Outcome ─────────────────────────────────── */

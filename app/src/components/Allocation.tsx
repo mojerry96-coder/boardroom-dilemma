@@ -53,10 +53,10 @@ export function Readouts({ gri, rcs }: { gri: number; rcs: number }) {
   const rcsTone = rcs >= 70 ? 'good' : rcs >= 45 ? 'mid' : 'bad';
   return (
     <p className="readouts" aria-live="polite">
-      <span className={`readout readout--${griTone}`} title="Governance Risk Index — lower is better">
+      <span className={`readout readout--${griTone}`} title="Governance Risk Index: lower is better">
         Governance risk <b>{gri}</b> <span className="readout__band">{griBand(gri)}</span>
       </span>
-      <span className={`readout readout--${rcsTone}`} title="Reform Credibility Score — higher is better">
+      <span className={`readout readout--${rcsTone}`} title="Reform Credibility Score: higher is better">
         Reform credibility <b>{rcs}</b> <span className="readout__band">{rcsBand(rcs)}</span>
       </span>
     </p>

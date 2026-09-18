@@ -38,7 +38,7 @@ export const DOCUMENTS = {
     id: 'brief',
     kind: 'brief',
     title: 'Your brief',
-    heading: 'Company Secretariat — Brief for the Emergency Board Session',
+    heading: 'Company Secretariat: Brief for the Emergency Board Session',
     classification: 'CONFIDENTIAL',
     alt: 'The context brief for your role.',
     keyFacts: [
@@ -54,17 +54,17 @@ export const DOCUMENTS = {
       },
       {
         t: 'p',
-        text: "Three weeks ago, a contract worker died in an accident at DIN's Ogun State facility, on a production line that had been running with a bypassed safety interlock — a cost-cutting measure introduced eight months earlier under pressure to hit group-wide margin targets.",
+        text: "Three weeks ago, a contract worker died in an accident at DIN's Ogun State facility, on a production line that had been running with a bypassed safety interlock, a cost-cutting measure introduced eight months earlier under pressure to hit group-wide margin targets.",
       },
       {
         t: 'p',
-        text: 'Separately, an internal audit has flagged a pattern of “facilitation payments” made through a logistics agent to expedite customs clearance and local permits — payments senior local management describes as “how things get done here” and which UK headquarters says it was never formally told about.',
+        text: 'Separately, an internal audit has flagged a pattern of “facilitation payments” made through a logistics agent to expedite customs clearance and local permits. Senior local management describes these payments as “how things get done here”, and UK headquarters says it was never formally told about them.',
       },
       { t: 'p', text: 'A journalist has begun asking questions. The regulator has not yet opened a formal inquiry, but is aware of the accident.' },
       { t: 'p', text: 'You have been asked to advise the Board before its emergency session in 72 hours.' },
       {
         t: 'p',
-        text: '**Your task:** guide the Board toward a governance response that is ethically defensible, not just reputationally convenient — and be prepared to justify every recommendation you make.',
+        text: '**Your task:** guide the Board toward a governance response that is ethically defensible, not just reputationally convenient, and be prepared to justify every recommendation you make.',
       },
     ],
   },
@@ -79,7 +79,7 @@ export const DOCUMENTS = {
     keyFacts: [
       'A contract worker was fatally injured on **1 June 2026** at the DIN Ogun State Production Facility.',
       'The line’s safety interlock was under a **temporary bypass** that had run longer than normally allowed.',
-      'The file refers to approval to keep producing — but **the full approval chain has not been verified**.',
+      'The file refers to approval to keep producing, but **the full approval chain has not been verified**.',
     ],
     blocks: [
       {
@@ -90,7 +90,7 @@ export const DOCUMENTS = {
           ['Date of incident', '1 June 2026'],
           ['Incident type', 'Fatal workplace incident'],
           ['Person affected', 'Contract worker'],
-          ['Status', 'Preliminary — investigation open'],
+          ['Status', 'Preliminary, investigation open'],
         ],
       },
       { t: 'h', text: '1. Incident summary' },
@@ -146,7 +146,7 @@ export const DOCUMENTS = {
       },
       { t: 'meta', rows: [['Prepared for', 'Board pre-review']] },
     ],
-    footer: 'CONFIDENTIAL — NOT FOR EXTERNAL DISTRIBUTION',
+    footer: 'CONFIDENTIAL · NOT FOR EXTERNAL DISTRIBUTION',
   },
 
   nearMiss: {
@@ -159,7 +159,7 @@ export const DOCUMENTS = {
     keyFacts: [
       'On **4 February 2026**, the same line did not stop when the interlock should have activated.',
       'The interlock was already under a **temporary bypass** pending maintenance.',
-      'The report was closed locally — with **no record that the interlock was ever restored**.',
+      'The report was closed locally, with **no record that the interlock was ever restored**.',
     ],
     blocks: [
       {
@@ -216,11 +216,11 @@ export const DOCUMENTS = {
     id: 'payments',
     kind: 'audit',
     title: 'Payment Records',
-    heading: 'Internal Audit Extract — Expediting Fee Payments',
-    classification: 'CONFIDENTIAL — INTERNAL AUDIT',
+    heading: 'Internal Audit Extract: Expediting Fee Payments',
+    classification: 'CONFIDENTIAL · INTERNAL AUDIT',
     alt: 'Internal audit extract listing three expediting-fee payments to one logistics agent.',
     keyFacts: [
-      '**Three payments** — ₦4.8m, ₦5.25m and ₦6.1m — went to one agent, Crestfield Logistics, over about fourteen months.',
+      '**Three payments** (₦4.8m, ₦5.25m and ₦6.1m) went to one agent, Crestfield Logistics, over about fourteen months.',
       'All were charged to the **“Expediting Fee”** budget line, and the files do not show where the money finally went.',
       'Local management called it **“how things get done here”**; UK headquarters says it was never formally told.',
     ],
@@ -229,7 +229,7 @@ export const DOCUMENTS = {
         t: 'meta',
         rows: [
           ['Reference', 'DIN/IA/EF-062226'],
-          ['Review period', 'April 2025 – May 2026'],
+          ['Review period', 'April 2025 to May 2026'],
           ['Prepared by', 'Internal Audit'],
           ['Status', 'Escalation required'],
         ],
@@ -272,7 +272,7 @@ export const DOCUMENTS = {
         ],
       },
     ],
-    footer: 'CONFIDENTIAL — INTERNAL AUDIT',
+    footer: 'CONFIDENTIAL · INTERNAL AUDIT',
   },
 
   correspondence: {
@@ -370,7 +370,7 @@ export const DOCUMENTS = {
     alt: 'Signed statement from Shift Supervisor Tunde Adebayo dated 23 June 2026.',
     keyFacts: [
       'Shift Supervisor **Tunde Adebayo** raised the bypass with the Regional Director after the February near miss.',
-      'The Regional Director approved it **“temporarily” — in writing**, on 12 February 2026.',
+      'The Regional Director approved it **“temporarily”, in writing**, on 12 February 2026.',
       'The reply said: **“Understand local realities; keep documentation light.”** The decision was not the plant floor’s alone.',
     ],
     blocks: [
@@ -397,11 +397,11 @@ export const DOCUMENTS = {
       },
       {
         t: 'p',
-        text: 'The Regional Director referred to the same approach used in previous operating discussions — that we should **“understand local realities”** and **“keep documentation light.”**',
+        text: 'The Regional Director referred to the same approach used in previous operating discussions: that we should **“understand local realities”** and **“keep documentation light.”**',
       },
       {
         t: 'p',
-        text: "The approval was also given in writing. When I submitted the request to extend the operating deviation on 12 February 2026, the Regional Director's reply read: ==“Approved — temporarily. Understand local realities; keep documentation light.”== A copy of that reply is attached to this statement.",
+        text: "The approval was also given in writing. When I submitted the request to extend the operating deviation on 12 February 2026, the Regional Director's reply read: ==“Approved, temporarily. Understand local realities; keep documentation light.”== A copy of that reply is attached to this statement.",
       },
       { t: 'p', text: '==I understood this as approval to continue the temporary arrangement while maintenance was deferred.==' },
       {
@@ -418,8 +418,8 @@ export const DOCUMENTS = {
     kind: 'memo',
     title: "MD's Draft Talking Points",
     letterhead: true,
-    heading: 'Draft — Talking Points for the Emergency Board Session',
-    classification: 'CONFIDENTIAL — BOARD ONLY',
+    heading: 'Draft: Talking Points for the Emergency Board Session',
+    classification: 'CONFIDENTIAL · BOARD ONLY',
     alt: "The Managing Director's draft talking points, including the line “This is not who we are as a company.”",
     keyFacts: [
       'The **Managing Director’s draft** for the emergency Board session, dated 22 June.',
@@ -446,9 +446,9 @@ export const DOCUMENTS = {
           'Separately, Internal Audit has raised questions about certain expediting-fee payments. These are being reviewed through normal finance processes.',
         ],
       },
-      { t: 'note', text: 'Company Secretary — please confirm framing before the session.' },
+      { t: 'note', text: 'Company Secretary: please confirm framing before the session.' },
     ],
-    footer: 'CONFIDENTIAL — BOARD ONLY',
+    footer: 'CONFIDENTIAL · BOARD ONLY',
   },
 
   briefing: {
@@ -456,8 +456,8 @@ export const DOCUMENTS = {
     kind: 'brief',
     title: 'Crisis Briefing Note',
     letterhead: true,
-    heading: 'Crisis Briefing Note — Company Secretariat',
-    classification: 'CONFIDENTIAL — BOARD ONLY',
+    heading: 'Crisis Briefing Note: Company Secretariat',
+    classification: 'CONFIDENTIAL · BOARD ONLY',
     alt: 'Crisis briefing note summarising what is known, stakeholders, legal considerations and the self-report decision.',
     keyFacts: [
       '**Known:** the interlock was bypassed, a February near miss was closed locally, and three payments went to one agent.',
@@ -483,7 +483,7 @@ export const DOCUMENTS = {
         ],
       },
     ],
-    footer: 'CONFIDENTIAL — BOARD ONLY',
+    footer: 'CONFIDENTIAL · BOARD ONLY',
   },
 } satisfies Record<string, DocDef>;
 

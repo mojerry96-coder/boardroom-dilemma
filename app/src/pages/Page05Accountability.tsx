@@ -93,7 +93,7 @@ export function Page05Accountability() {
                       <FileText size={22} />
                     </span>
                     <span className="page05__alert-text">
-                      {ACCOUNTABILITY_COPY.newEvidenceTitle} —<br />
+                      {ACCOUNTABILITY_COPY.newEvidenceTitle}:<br />
                       <b>Supervisor statement</b>
                     </span>
                     {!acc.statementRead && <span className="page05__alert-dot" aria-label="Unread" />}

@@ -167,7 +167,8 @@ def concat(name, segments):
             fh.write(f"file '{path}'\n")
     out = f"{OUT}/{name}.mp4"
     run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", listfile,
-         "-c:v", "libx264", "-preset", "medium", "-crf", "23", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
+         "-c:v", "libx264", "-preset", "slow", "-crf", "24", "-maxrate", "1500k", "-bufsize", "3000k",
+         "-pix_fmt", "yuv420p", "-movflags", "+faststart",
          "-c:a", "aac", "-b:a", "128k", out])
     return out
 
@@ -198,6 +199,129 @@ def write_vtt(name, cues):
             fh.write(f"{i}\n{ts(a)} --> {ts(b)}\n{body}\n\n")
 
 
+V2 = f"{AUD}/intro_v2"
+NEW_IMG = f"{ORIG}/new/Boardroom_Dilemma_Images"
+
+
+def post_accident_segment(name="i05_post"):
+    """Everything between the accident and the Boardroom, as one edit with one sound bed.
+
+    The clips keep their pictures but lose their dialogue: the narrator carries the story. Room tone,
+    paper and a low score run continuously underneath, so nothing switches off at a cut.
+    Pieces: (kind, source, seconds, extra). Narration: (file, start). Returns (path, duration, cues).
+    """
+    pieces = [
+        ("clip", f"{VID}/intro_e.mp4", None, {"speed": 0.75, "fade_in": 0.7}),       # managers in the office
+        ("still", f"{NEW_IMG}/07_safety_interlock.png", 4.7, {"zoom": 1.06}),         # the bypassed interlock
+        ("still", f"{NEW_IMG}/06_factory_incident.png", 4.0, {"zoom": 1.05}),         # earlier warnings
+        ("still", f"{BUILD}/v2/insert_email.png", 9.5, {"zoom": 1.10, "focus": (0.5, 0.72)}),
+        ("clip", f"{VID}/intro_f.mp4", 5.5, {"speed": 1.0}),                          # audit at work
+        ("still", f"{BUILD}/v2/insert_payments.png", 5.8, {"zoom": 1.08, "focus": (0.62, 0.5)}),
+        ("clip", f"{VID}/intro_g1.mp4", None, {"speed": 0.85}),                       # journalist
+        ("clip", f"{VID}/intro_g2.mp4", None, {"speed": 0.85}),                       # regulator
+        ("still", f"{ORIG}/p01_intro.png", 11.6, {"zoom": 1.07, "fade_out": 0.5}),    # back to the Boardroom
+    ]
+    narration = [
+        ("vo_a", 0.9, "The accident stopped production, but the first reports quickly raised a more difficult question. Had people inside Delta already known that the safety system was being bypassed?"),
+        ("vo_b", 12.8, "As management began reviewing what happened, earlier warnings started to surface. Internal communication suggested that concerns had been raised before the incident, while some managers were also trying to control how much was being written down."),
+        ("vo_c", 26.8, "The investigation then uncovered another issue. A series of repeated payments to third parties appeared in the records, raising questions about what those payments were for, and who had approved them."),
+        ("vo_d", 38.1, "Before the company had reached its own conclusion, the crisis had already moved outside the organisation. A journalist was preparing a story, and the regulator wanted answers from the Board."),
+        ("vo_e", 50.3, "Delta now faced more than a workplace accident. The Board needed to understand what happened, who was responsible, what should be disclosed, and what the company should do next."),
+    ]
+    parts, t = [], 0.0
+    for i, (kind, src, dur, o) in enumerate(pieces):
+        part = f"{BUILD}/v2/{name}_{i:02d}.mp4"
+        if kind == "clip":
+            sp = o.get("speed", 1.0)
+            d = dur if dur else duration(src) / sp
+            v = f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},setsar=1,setpts=PTS/{sp},fps={FPS}"
+            v += f",tpad=stop_mode=clone:stop_duration=1"
+            if o.get("fade_in"):
+                v += f",fade=t=in:st=0:d={o['fade_in']}"
+            run(["ffmpeg", "-v", "error", "-y", "-i", src, "-an", "-vf", v + ",format=yuv420p", "-t", f"{d}",
+                 "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-r", f"{FPS}", part])
+        else:
+            d = dur
+            frames = int(d * FPS)
+            z = o.get("zoom", 1.06)
+            fx, fy = o.get("focus", (0.5, 0.5))
+            step = (z - 1.0) / max(frames, 1)
+            v = (f"scale=2560:1440:force_original_aspect_ratio=increase,crop=2560:1440,"
+                 f"zoompan=z='1+{step}*on':d={frames}:x='(iw-iw/zoom)*{fx}':y='(ih-ih/zoom)*{fy}':s={W}x{H}:fps={FPS},setsar=1")
+            if o.get("fade_out"):
+                v += f",fade=t=out:st={d - o['fade_out']}:d={o['fade_out']}"
+            run(["ffmpeg", "-v", "error", "-y", "-loop", "1", "-i", src, "-vf", v + ",format=yuv420p", "-t", f"{d}",
+                 "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-r", f"{FPS}", part])
+        parts.append(part)
+        t += d
+    total = round(t, 2)
+    listfile = f"{BUILD}/v2/{name}_list.txt"
+    with open(listfile, "w") as fh:
+        fh.writelines(f"file '{p}'\n" for p in parts)
+    video = f"{BUILD}/v2/{name}_video.mp4"
+    run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", listfile, "-c", "copy", video])
+
+    # Sound bed: alarm tail bridging out of the accident, room tone, paper at the documents, a low score
+    # that dips under the narrator, and the narration on top.
+    sfx = {n: f"{V2}/sfx/{n}" for n in os.listdir(f"{V2}/sfx")}
+    alarm = next(p for n, p in sfx.items() if "Dista" in n)
+    room = next(p for n, p in sfx.items() if "Quiet" in n)
+    paper = next(p for n, p in sfx.items() if "Soft" in n)
+    music = sorted(f"{V2}/music/{n}" for n in os.listdir(f"{V2}/music"))
+    inputs = ["-i", alarm, "-stream_loop", "-1", "-i", room, "-i", paper, "-i", paper,
+              "-stream_loop", "-1", "-i", music[0], "-stream_loop", "-1", "-i", music[1]]
+    for vo, _, _ in narration:
+        inputs += ["-i", f"{V2}/{vo}.mp3"]
+    fmt = "aresample=48000,aformat=channel_layouts=stereo"
+    g = [
+        f"[0:a]{fmt},volume=0.55,afade=t=out:st=1.2:d=2.6[alarm]",
+        f"[1:a]{fmt},atrim=0:{total},volume=0.13,afade=t=in:st=0:d=1.6,afade=t=out:st={total - 2.5}:d=2.5[room]",
+        f"[2:a]{fmt},volume=0.16,adelay=16900|16900[p1]",
+        f"[3:a]{fmt},volume=0.16,adelay=31900|31900[p2]",
+        f"[4:a]{fmt},atrim=0:{total},volume=0.18[m1]",
+        f"[5:a]{fmt},atrim=0:{total},volume=0.12[m2]",
+        f"[m1][m2]amix=inputs=2:normalize=0,afade=t=in:st=0.4:d=3,afade=t=out:st={total - 3}:d=3[score]",
+    ]
+    vo_labels = []
+    for i, (vo, st, _) in enumerate(narration):
+        ms = int(st * 1000)
+        g.append(f"[{6 + i}:a]{fmt},adelay={ms}|{ms},apad=whole_dur={total}[v{i}]")
+        vo_labels.append(f"[v{i}]")
+    g.append(f"{''.join(vo_labels)}amix=inputs={len(narration)}:normalize=0,asplit=2[vo][key]")
+    # Gentle ducking: the score drops a few dB while the narrator speaks, with slow attack and release.
+    g.append("[score][key]sidechaincompress=threshold=0.03:ratio=4:attack=120:release=900:makeup=1[ducked]")
+    g.append(f"[vo][ducked][room][alarm][p1][p2]amix=inputs=6:normalize=0:duration=first,atrim=0:{total}[a]")
+    audio = f"{BUILD}/v2/{name}_audio.wav"
+    run(["ffmpeg", "-v", "error", "-y", *inputs, "-filter_complex", ";".join(g), "-map", "[a]", "-t", f"{total}", audio])
+    out = f"{BUILD}/{name}.mp4"
+    run(["ffmpeg", "-v", "error", "-y", "-i", video, "-i", audio, "-map", "0:v", "-map", "1:a", "-t", f"{total}",
+         "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-ar", "48000", out])
+    cues = []
+    for vo, st, text in narration:
+        cues.extend(sentence_cues("Narrator", text, st, st + duration(f"{V2}/{vo}.mp3")))
+    return (out, total), cues
+
+
+def caption_chunks(text, limit=84):
+    """Sentences, and long sentences split at the comma nearest their middle, so no caption runs past two lines."""
+    out = []
+    for sent in (x.strip() for x in re.findall(r"[^.?!]+[.?!]", text)):
+        while len(sent) > limit:
+            commas = [m.end() for m in re.finditer(r", ", sent)]
+            if not commas:
+                break
+            cut = min(commas, key=lambda i: abs(i - len(sent) / 2))
+            out.append(sent[:cut].strip())
+            sent = sent[cut:].strip()
+        out.append(sent)
+    return out
+
+
+def sentence_cues(speaker, text, start, end):
+    """One caption per short phrase, timed by length across the narration."""
+    return spread([(speaker, x) for x in caption_chunks(text)], start, end, gap=0.15)
+
+
 def build_intro():
     segs, cues, t = [], [], 0.0
 
@@ -207,6 +331,7 @@ def build_intro():
         cues.extend((s, x, t + a, t + b) for s, x, a, b in seg_cues)
         t += seg[1]
 
+    # Before the accident the characters speak for themselves.
     add(seg_clip("i01_a", f"{VID}/intro_a.mp4"), spread([("Board member", "Who knew the interlock had been bypassed?")], 0.4, 3.7))
     vo_b = f"{AUD}/vo_b.mp3"
     add(seg_clip("i02_b", f"{VID}/intro_b.mp4", speed=0.7, gain=0.9, vo=(vo_b, 0.3), slate="OGUN STATE FACILITY · THREE WEEKS EARLIER"),
@@ -215,34 +340,16 @@ def build_intro():
         spread([("Operator", "That interlock has been bypassed for months. We shouldn't be running this line."),
                 ("Supervisor", "I've raised it. The answer is keep running. Just get this batch through.")], 0.4, 7.7))
     add(seg_clip("i04_d", f"{VID}/intro_d.mp4"), [(None, "[Alarm. Machinery stops abruptly. Shouting.]", 0.0, 4.0)])
-    add(seg_clip("i05_e", f"{VID}/intro_e.mp4"),
-        spread([("Plant Manager", "What exactly do you want in the incident report?"),
-                ("Regional Director", "Stick to what's confirmed. Don't put conclusions in writing yet.")], 0.3, 5.8))
-    # F has dialogue from ~2.2s, so the narration runs over a slow push-in on its opening
-    # spreadsheet frame, then F plays in full. Cue times follow the measured pauses.
-    f_src = f"{VID}/intro_f.mp4"
-    f_still = f"{BUILD}/intro_f_first.png"
-    run(["ffmpeg", "-v", "error", "-y", "-ss", "0.3", "-i", f_src, "-frames:v", "1", f_still])
-    vo_e = f"{AUD}/vo_e.mp3"
-    add(seg_still("i06_f1", f_still, duration(vo_e) + 0.6, vo=(vo_e, 0.2), zoom_to=1.06),
-        [("Narrator", "As the first reports came in, it became clear the accident might not be an isolated safety failure.", 0.2, 0.2 + duration(vo_e))])
-    add(seg_clip("i07_f2", f_src),
-        [("Auditor", "I've gone back fourteen months. Three payments, all through the same agent.", 2.2, 5.9),
-         ("Finance Manager", "They're expediting fees.", 7.0, 8.1),
-         ("Auditor", "Then why is there no record of where the money actually went?", 8.8, 10.9)])
-    add(seg_clip("i08_g1", f"{VID}/intro_g1.mp4"),
-        spread([("Journalist", "Workers say safety concerns were raised before the fatality. Will the company comment?")], 0.3, 4.8))
-    add(seg_clip("i09_g2", f"{VID}/intro_g2.mp4"),
-        spread([("FISCA official", "We're aware of the fatality. We have not opened an inquiry — at this stage.")], 0.3, 4.8))
-    vo_g = f"{AUD}/vo_g.mp3"
-    add(seg_still("i10_kb1", f"{ORIG}/p03_tabletop.png", duration(vo_g) + 0.8, vo=(vo_g, 0.3)),
-        [("Narrator", "Questions about safety, oversight and financial conduct were beginning to converge.", 0.3, 0.3 + duration(vo_g))])
-    add(seg_clip("i11_h", f"{VID}/intro_h.mp4"),
-        spread([("Managing Director", "The Board meets in seventy-two hours. I need to understand what happened, how far this goes, and what we can defend.")], 0.3, 6.8))
-    vo_h = f"{AUD}/vo_h.mp3"
-    add(seg_still("i12_kb2", f"{ORIG}/p02_role.png", duration(vo_h) + 0.9, vo=(vo_h, 0.3)),
-        [("Narrator", "You will examine the evidence, determine where accountability lies, and advise the Board on what Delta should do next.", 0.3, 0.3 + duration(vo_h))])
-    add(seg_title("i13_title", "YOU HAVE 72 HOURS.", 3.2), [(None, "You have 72 hours.", 0.3, 3.0)])
+    # After it, the narrator tells the story over the evidence (no character dialogue).
+    post, post_cues = post_accident_segment()
+    add(post, post_cues)
+    # The Managing Director's handoff, then the narrator hands over to the learner.
+    add(seg_clip("i11_h", f"{VID}/intro_h.mp4", gain=1.8),
+        sentence_cues("Managing Director", "The Board meets in seventy-two hours. I need to understand what happened, how far this goes, and what we can defend.", 0.3, 6.8))
+    vo_f = f"{V2}/vo_f.mp3"
+    add(seg_still("i12_kb2", f"{ORIG}/p02_role.png", duration(vo_f) + 1.3, vo=(vo_f, 0.35)),
+        [("Narrator", "That is where you come in.", 0.35, 0.35 + duration(vo_f))])
+    add(seg_title("i13_title", "YOU HAVE 72 HOURS", 3.2), [(None, "You have 72 hours.", 0.3, 3.0)])
     out = concat("intro", segs)
     write_vtt("intro", cues)
     print(out, f"{duration(out):.1f}s")
@@ -250,7 +357,7 @@ def build_intro():
 
 EXEC_OPTIONS = {
     "a": ("You're right, we should focus on the business realities and not get distracted.", "Good. I knew you'd see sense."),
-    "b": ("I hear the pressure you were under — and I think the Board needs to hear that too, alongside what it cost.", "Then say it that way in there — pressure and cost, both."),
+    "b": ("I hear the pressure you were under, and I think the Board needs to hear that too, alongside what it cost.", "Then say it that way in there. Pressure and cost, both."),
     "c": ("That's exactly the kind of thinking that got a man killed.", "Remember you said that."),
     "d": ("Let's discuss this after the Board meeting.", "After, then."),
 }
@@ -269,34 +376,30 @@ def build_executive():
     add(seg_still("e01_kb", f"{ORIG}/p07_executive.png", duration(vo) + 0.7, vo=(vo, 0.3), zoom_to=1.05),
         [("Narrator", "Your investigation has reached the Boardroom. Senior leaders now have something to lose.", 0.3, 0.3 + duration(vo))])
     add(seg_clip("e02_setup1", f"{VID}/exec_setup1.mp4"),
-        spread([("Chidi Okafor", "Let's not turn this into a witch hunt. Performance is everything in this market — you slow down, you lose the contract, you lose the jobs.")], 0.3, 9.6))
+        spread([("Chidi Okafor", "Let's not turn this into a witch hunt. Performance is everything in this market. You slow down, you lose the contract, you lose the jobs.")], 0.3, 9.6))
     add(seg_clip("e03_setup2", f"{VID}/exec_setup2.mp4"),
         spread([("Chidi Okafor", "Everyone signed off on the budget. This is not about ethics, it's about being realistic.")], 0.2, 4.8))
     concat("executive_setup", segs)
     write_vtt("executive_setup", cues)
 
-    # Each branch opens on a short hold of setup2's last frame (Chidi waiting) while the learner's
-    # reply shows as a caption — the reply is never voiced. Then his reaction clip plays.
-    # BRANCH_CUT: (trim start, speech start, speech end) measured with silencedetect. D's clip
-    # opens with an unwanted voiced paraphrase of the learner's line, so it is trimmed away.
-    hold_img = f"{ORIG}/exec_setup2_last.png"
-    for key, (reply, line) in EXEC_OPTIONS.items():
+    # Each reaction starts on Chidi himself, half a second before he answers: the player's reply was already on
+    # screen when they chose it, so there is no held still or replayed caption. BRANCH_CUT holds
+    # (trim start, speech start, speech end) measured with silencedetect; D's clip opens with an unwanted
+    # voiced paraphrase of the learner's line, which the trim removes.
+    for key in EXEC_OPTIONS:
         src = f"{VID}/exec_branch_{key}.mp4"
         if not os.path.exists(src):
             print("missing", src)
             continue
         cut, s0, s1 = BRANCH_CUT[key]
-        hold = min(5.0, max(2.2, len(reply.split()) / 4 + 0.8))
-        h = seg_still(f"e1{key}_hold", hold_img, hold, zoom_to=1.02)
-        trim = (cut, duration(src)) if cut else None
-        c = seg_clip(f"e1{key}_branch", src, trim=trim)
-        concat(f"executive_branch_{key}", [h, c])
-        write_vtt(f"executive_branch_{key}", [
-            ("You", reply, 0.15, hold - 0.15),
-            ("Chidi Okafor", line, hold + s0 - cut - 0.1, hold + s1 - cut + 0.4),
-        ])
+        start = max(cut, s0 - LEAD_IN)
+        c = seg_clip(f"e1{key}_branch", src, trim=(start, duration(src)))
+        concat(f"executive_branch_{key}", [c])
+        write_vtt(f"executive_branch_{key}", [("Chidi Okafor", EXEC_OPTIONS[key][1], s0 - start - 0.1, s1 - start + 0.4)])
     print("executive films built")
 
+
+LEAD_IN = 0.5  # seconds of Chidi before he speaks
 
 BRANCH_CUT = {
     "a": (0.0, 1.30, 3.98),

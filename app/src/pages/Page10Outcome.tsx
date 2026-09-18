@@ -18,7 +18,7 @@ import type { EndingId, VarKey } from '../sim/types';
 // Page 10 — Outcome (spec §21). Resolves to one of three endings; never hard-coded positive.
 
 const VISUAL: Record<EndingId, { title: string; subtitle: string; filter?: string }> = {
-  'END-A': { title: 'Credibility Preserved', subtitle: 'The Board accepted a difficult truth — and a stronger path forward.' },
+  'END-A': { title: 'Credibility Preserved', subtitle: 'The Board accepted a difficult truth, and a stronger path forward.' },
   'END-B': { title: 'Legitimacy Fragile', subtitle: 'The organisation avoids immediate collapse, but trust remains uneven.', filter: 'saturate(0.72) brightness(0.9)' },
   'END-C': {
     title: 'Credibility Collapses',

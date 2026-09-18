@@ -58,7 +58,7 @@ function journeyItems(sim: SimState): JourneyItem[] {
     const opt = sim.stakeholderResponses[s.id];
     if (!opt) continue;
     items.push({
-      title: `Stakeholder — ${s.name}`,
+      title: `Stakeholder: ${s.name}`,
       choice: s.short[opt],
       lines: [[s.reaction[opt], ...stakeholderExtras(s.id, opt, sim)].join(' '), s.feedback],
     });
@@ -66,7 +66,7 @@ function journeyItems(sim: SimState): JourneyItem[] {
   if (sim.executiveResponse) {
     const o = sim.executiveResponse;
     items.push({
-      title: `Executive pressure — ${EXECUTIVE.name}`,
+      title: `Executive pressure: ${EXECUTIVE.name}`,
       choice: EXECUTIVE.short[o],
       lines: [EXECUTIVE.reaction[o], EXECUTIVE.feedback[o]],
     });
@@ -86,10 +86,10 @@ function journeyItems(sim: SimState): JourneyItem[] {
   }
   const q1 = sim.relationshipCost ? Q1_RELATIONSHIP : Q1_COMPLIANCE;
   if (sim.boardQA.q1) {
-    items.push({ title: `Board Q&A — ${q1.speaker}`, choice: q1.short[sim.boardQA.q1], lines: [`“${q1.question}”`, q1.feedback[sim.boardQA.q1]] });
+    items.push({ title: `Board Q&A: ${q1.speaker}`, choice: q1.short[sim.boardQA.q1], lines: [`“${q1.question}”`, q1.feedback[sim.boardQA.q1]] });
   }
   if (sim.boardQA.q2) {
-    items.push({ title: `Board Q&A — ${Q2.speaker}`, choice: Q2.short[sim.boardQA.q2], lines: [`“${Q2.question}”`, Q2.feedback[sim.boardQA.q2]] });
+    items.push({ title: `Board Q&A: ${Q2.speaker}`, choice: Q2.short[sim.boardQA.q2], lines: [`“${Q2.question}”`, Q2.feedback[sim.boardQA.q2]] });
   }
   return items;
 }

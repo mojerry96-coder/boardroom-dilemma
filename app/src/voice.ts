@@ -11,7 +11,7 @@ import {
 } from './sim/content';
 import { fill, leverList } from './sim/derive';
 import { BRIEFING, CHAPTERS, GUIDE } from './sim/experience';
-import { LEVERS, type Lever } from './sim/types';
+import { LEVERS, OPTS, type Lever } from './sim/types';
 
 // Recorded voice lines (ElevenLabs), mapped by exact text. Files live in public/voice.
 // Lines without a recording fall back to browser speech synthesis.
@@ -71,6 +71,10 @@ const CHARACTERS: [string, string][] = [
   [Q1_RELATIONSHIP.question, 'qa_q1_relationship'],
   [Q1_COMPLIANCE.question, 'qa_q1_compliance'],
   [Q2.question, 'qa_q2'],
+  // What each questioner says back to the learner's chosen answer.
+  ...OPTS.map((o): [string, string] => [Q1_RELATIONSHIP.reaction[o], `qa_react_q1r_${o.toLowerCase()}`]),
+  ...OPTS.map((o): [string, string] => [Q1_COMPLIANCE.reaction[o], `qa_react_q1c_${o.toLowerCase()}`]),
+  ...OPTS.map((o): [string, string] => [Q2.reaction[o], `qa_react_q2_${o.toLowerCase()}`]),
   ...FOLLOW_UPS,
 ];
 

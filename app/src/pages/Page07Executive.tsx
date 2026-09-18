@@ -1,9 +1,10 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { ChatCircle, Clock, Shield, Users } from '@phosphor-icons/react';
 import { EXECUTIVE_BRANCH_END, EXECUTIVE_WAIT, FILMS, SCENES } from '../assets';
 import { useExperience } from '../components/Experience';
 import { FilmPlayer } from '../components/FilmPlayer';
 import { useNarration } from '../components/Narration';
+import { isConstrainedNetwork, loadClip } from '../media';
 import { revealTiming, type PageIntro } from '../components/Reveal';
 import { PresenceClip } from '../components/SpeakerCard';
 import { OBJECTIVES } from '../sim/experience';
@@ -38,6 +39,32 @@ export function Page07Executive() {
   const [selected, setSelected] = useState<Opt | null>(null);
   const [filmPlayed, setFilmPlayed] = useState(false);
   const order = useMemo(() => shuffled(OPTS, sim.seed, 'executive'), [sim.seed]);
+
+  // All four reactions are downloaded while the player watches the corridor scene and decides, so the one
+  // they trigger starts at once (no second loader). The lighter rendition on slow connections.
+  const [branchUrls, setBranchUrls] = useState<Partial<Record<Opt, string>>>({});
+  useEffect(() => {
+    if (chosen) return;
+    let live = true;
+    for (const opt of OPTS) {
+      const film = FILMS.executiveBranch[opt];
+      if (!film) continue;
+      const url = isConstrainedNetwork() && film.low ? film.low : film.src;
+      loadClip(url).then(
+        (blob) => live && setBranchUrls((m) => ({ ...m, [opt]: blob })),
+        () => {},
+      );
+    }
+    return () => {
+      live = false;
+    };
+  }, [chosen]);
+  const [leaving, setLeaving] = useState(false);
+  const branchFilm = (opt: Opt) => {
+    const film = FILMS.executiveBranch[opt];
+    const blob = branchUrls[opt];
+    return film && blob ? { ...film, src: blob, low: undefined } : film;
+  };
 
   // The film is this page's opening; the title and choices reveal as it ends.
   const intro: PageIntro = { ready: true, animate: filmPlayed, skip: noop };
@@ -77,7 +104,7 @@ export function Page07Executive() {
               ) : (
                 <>
                   <div
-                    className={`page07__choice-stack${filmPlayed ? ' stagger' : ''}`}
+                    className={`page07__choice-stack${filmPlayed ? ' stagger' : ''}${leaving ? ' is-leaving' : ''}`}
                     style={{ '--stagger-base': `${timing.controlsAt}ms` } as CSSProperties}
                     role="group"
                     aria-label={`Your response to ${EXECUTIVE.name}`}
@@ -90,6 +117,7 @@ export function Page07Executive() {
                         style={{ '--i': i } as CSSProperties}
                         aria-pressed={selected === opt}
                         title={EXECUTIVE.options[opt]}
+                        disabled={leaving}
                         onClick={() => setSelected(opt)}
                       >
                         <span className="choice-row__icon" aria-hidden="true">
@@ -105,11 +133,16 @@ export function Page07Executive() {
                   <div className="page07__continue">
                     <PillButton
                       variant="blue"
-                      disabled={!selected}
+                      disabled={!selected || leaving}
                       onClick={() => {
-                        if (!selected) return;
+                        if (!selected || leaving) return;
+                        // Save the choice, let the options fade (about 180ms), then his reaction plays.
+                        setLeaving(true);
                         dispatch({ type: 'CHOOSE_EXECUTIVE', opt: selected });
-                        setPhase('branch');
+                        window.setTimeout(() => {
+                          setLeaving(false);
+                          setPhase('branch');
+                        }, 180);
                       }}
                     >
                       Continue Scenario
@@ -125,7 +158,7 @@ export function Page07Executive() {
 
       {phase === 'setup' && !chapterActive && (
         <FilmPlayer
-          title="Executive Pressure — the corridor"
+          title="Executive Pressure: the corridor"
           cues={EXEC_SETUP_FILM}
           video={FILMS.executiveSetup}
           skipLabel="Skip scene"
@@ -135,9 +168,9 @@ export function Page07Executive() {
       )}
       {phase === 'branch' && chosen && (
         <FilmPlayer
-          title="Executive Pressure — his reaction"
+          title="Executive Pressure: his reaction"
           cues={execBranchFilm(chosen)}
-          video={FILMS.executiveBranch[chosen]}
+          video={branchFilm(chosen)}
           skipLabel="Skip"
           onEnd={() => {
             endFilm('done');

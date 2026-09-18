@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FILMS, SCENES } from '../assets';
 import { usePageIntro } from '../components/Experience';
 import { FilmPlayer } from '../components/FilmPlayer';
+import { isConstrainedNetwork, saveData } from '../media';
 import { SimulationStage } from '../components/SimulationStage';
 import { PillButton, StageCopy, TextLink } from '../components/ui';
 import { BRAND, INTRO_FILM, PAGE_META } from '../sim/content';
@@ -33,6 +34,10 @@ export function Page01Intro() {
           </div>
         </StageCopy>
       </SimulationStage>
+      {/* Start buffering the intro while the landing page is up, so it plays straight after the countdown. */}
+      {!film && FILMS.intro && !saveData() && (
+        <video src={isConstrainedNetwork() && FILMS.intro.low ? FILMS.intro.low : FILMS.intro.src} preload="auto" muted playsInline aria-hidden="true" style={{ display: 'none' }} />
+      )}
       {film && <FilmPlayer title="The Boardroom Dilemma" cues={INTRO_FILM} video={FILMS.intro} onEnd={next} skipLabel="Skip cinematic" countdown={3} />}
     </>
   );

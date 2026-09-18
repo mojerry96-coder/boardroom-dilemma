@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { CallNotification, CrisisCall } from '../components/CrisisCall';
 import { Check } from '@phosphor-icons/react';
 import { SCENES, TABLE_SHEETS } from '../assets';
 import { DocumentDialog, TableArtifact } from '../components/Documents';
 import { usePageIntro } from '../components/Experience';
-import { Reveal, revealTiming } from '../components/Reveal';
+import { useNarration } from '../components/Narration';
+import { Reveal, revealTiming, useDelayed } from '../components/Reveal';
 import { OBJECTIVES } from '../sim/experience';
 import { RadioPanel } from '../components/RadioPanel';
 import { SimulationStage } from '../components/SimulationStage';
@@ -52,7 +54,27 @@ function StepLine({ kicker, children }: { kicker: string; children: string }) {
   );
 }
 
+const callKey = (runId: string) => `boardroom-dilemma:call-heard:${runId}`;
+const callSeen = (runId: string) => {
+  try {
+    return sessionStorage.getItem(callKey(runId)) === '1';
+  } catch {
+    return false;
+  }
+};
+const markCallSeen = (runId: string) => {
+  try {
+    sessionStorage.setItem(callKey(runId), '1');
+  } catch {
+    /* storage unavailable — the offer may come back on reload */
+  }
+};
+
 export function Page04Crisis() {
+  return <CrisisDecisions />;
+}
+
+function CrisisDecisions() {
   const { sim, dispatch } = useSim();
   const framing = sim.boardFraming;
   const selfReport = sim.selfReportDecision;
@@ -62,6 +84,22 @@ export function Page04Crisis() {
   const [hint, setHint] = useState(false);
   const intro = usePageIntro('crisis', NARRATION.crisisLoad, !framing);
   const timing = revealTiming(PAGE_META[4].title, SUBTITLE, OBJECTIVES[4]);
+  const { stop } = useNarration();
+
+  // The Board's emergency call is optional: it rings in the top right once the page has settled, and only
+  // until the player joins, dismisses it, or makes their first decision.
+  const [call, setCall] = useState<'waiting' | 'ringing' | 'joined' | 'done'>(() => (framing || callSeen(sim.runId) ? 'done' : 'waiting'));
+  const ringReady = useDelayed(intro.ready, intro.animate ? timing.controlsAt + 1200 : 800);
+  useEffect(() => {
+    if (call === 'waiting' && ringReady) setCall('ringing');
+  }, [call, ringReady]);
+  useEffect(() => {
+    if (framing && call === 'ringing') setCall('done');
+  }, [framing, call]);
+  const endCall = () => {
+    markCallSeen(sim.runId);
+    setCall('done');
+  };
 
   const openDoc = (key: DocKey) => {
     if (key === 'briefing' && !framing) {
@@ -171,6 +209,17 @@ export function Page04Crisis() {
         </Reveal>
       </SimulationStage>
       <DocumentDialog doc={open ? DOCUMENTS[open] : null} onClose={close} />
+      {call === 'ringing' && !open && (
+        <CallNotification
+          onJoin={() => {
+            stop();
+            intro.skip();
+            setCall('joined');
+          }}
+          onDismiss={endCall}
+        />
+      )}
+      {call === 'joined' && <CrisisCall learnerName={sim.learnerName} onEnd={endCall} autoJoin />}
     </>
   );
 }

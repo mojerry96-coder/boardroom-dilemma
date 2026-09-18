@@ -421,67 +421,6 @@
   color: rgba(255, 255, 255, 0.86);
 }
 
-/* ── Speaker card (Page 9) ─────────────────────────────── */
-/* The person asking steps forward on the right, where the Board sits in the scene. */
-.speaker-card {
-  position: absolute;
-  z-index: 8;
-  right: calc(var(--stage-pad-x) + 2vw);
-  top: 17vh;
-  width: min(340px, 23vw);
-  margin: 0;
-  animation: speaker-pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
-}
-.speaker-card video,
-.speaker-card img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: #0b1624;
-  box-shadow: 0 24px 60px rgba(3, 13, 24, 0.55);
-}
-.speaker-card__name {
-  position: absolute;
-  left: 14px;
-  bottom: 14px;
-  padding: 7px 12px;
-  border-radius: var(--radius-pill);
-  background: rgba(8, 18, 31, 0.82);
-  color: #fff;
-  font: 700 11px / 1 var(--font-ui);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-@keyframes speaker-pop {
-  0% {
-    opacity: 0;
-    transform: translateY(14px) scale(0.92);
-  }
-  100% {
-    opacity: 1;
-    transform: none;
-  }
-}
-/* Phones: a small avatar beside the speaker's name. */
-.speaker-card--compact {
-  position: static;
-  flex: none;
-  width: 56px;
-  animation-duration: 0.4s;
-}
-.speaker-card--compact video,
-.speaker-card--compact img {
-  border-radius: 14px;
-  box-shadow: none;
-}
-.page09__speaker:has(.speaker-card) {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
 
 /* ── Loading on slow networks ──────────────────────────── */
 /* <picture> only chooses the file; the <img> inside keeps its own layout. */
@@ -974,5 +913,741 @@ picture {
   .chapter-card__bridge {
     font-size: 17px;
     margin-top: 10px;
+  }
+}
+
+/* ── Emergency Board call (Page 4) ─────────────────────── */
+/* A plain, unbranded video-call screen: camera-off tiles with profile photos; the speaker's ring follows their voice. */
+.call {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: radial-gradient(120% 90% at 50% 0%, #1a2433 0%, #0b1119 70%);
+  color: #fff;
+  font-family: var(--font-ui);
+  animation: fade-in 0.35s ease both;
+}
+.call.is-leaving {
+  animation: call-out 0.45s ease both;
+}
+@keyframes call-out {
+  to {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+.call__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 24px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.82);
+}
+.call__live {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e5484d;
+  box-shadow: 0 0 0 4px rgba(229, 72, 77, 0.2);
+}
+.call__clock {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.call__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 12px;
+  padding: 6px 24px 12px;
+  min-height: 0;
+  width: min(100%, 1180px);
+  justify-self: center;
+}
+.call__tile {
+  --level: 0;
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #202b3a, #151d28);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.call__tile.is-speaking {
+  border-color: rgba(94, 234, 212, 0.85);
+  box-shadow: inset 0 0 0 1px rgba(94, 234, 212, 0.5);
+}
+.call__avatar {
+  width: min(38%, 44vh, 180px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  position: relative;
+  transition: opacity 0.4s ease, filter 0.4s ease;
+}
+.call__avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #0f1722;
+}
+.call__tile.is-speaking .call__avatar {
+  box-shadow:
+    0 0 0 calc(3px + var(--level) * 7px) rgba(94, 234, 212, calc(0.35 + var(--level) * 0.45)),
+    0 0 calc(18px + var(--level) * 30px) rgba(94, 234, 212, calc(0.15 + var(--level) * 0.25));
+}
+/* Talking into a muted mic: the ring shows, but grey. */
+.call__tile.is-muted-talking {
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: none;
+}
+.call__tile.is-muted-talking .call__avatar {
+  box-shadow: 0 0 0 calc(3px + var(--level) * 6px) rgba(255, 255, 255, 0.28);
+}
+.call__tile.is-connecting .call__avatar {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+.call__connecting,
+.call__muted-note {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  font-weight: 600;
+}
+.call__muted-note {
+  background: rgba(229, 72, 77, 0.9);
+}
+.call__name {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.call__name svg {
+  flex: none;
+  color: #ff8a8d;
+}
+.call__self {
+  position: absolute;
+  right: 24px;
+  bottom: calc(12px + var(--safe-bottom));
+  width: 128px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #283446;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+.call__initials {
+  width: 30px;
+  height: 30px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--delta-green);
+  font-weight: 700;
+}
+.call__self-name {
+  position: absolute;
+  left: 8px;
+  bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.82);
+}
+.call__caption {
+  position: absolute;
+  left: 50%;
+  bottom: calc(92px + var(--safe-bottom));
+  transform: translateX(-50%);
+  width: min(calc(100% - 48px), 760px);
+  margin: 0;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.72);
+  text-align: center;
+  font-size: clamp(15px, 1.35vw, 19px);
+  line-height: 1.4;
+}
+.call__caption-name {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5eead4;
+}
+.call__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 24px calc(18px + var(--safe-bottom));
+}
+.call__progress {
+  flex: 0 1 220px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+  margin-right: 8px;
+}
+.call__progress span {
+  display: block;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.7);
+}
+.call__leave {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: #e5484d;
+  color: #fff;
+  font: 600 14px / 1 var(--font-ui);
+  cursor: pointer;
+}
+.call__leave:hover {
+  background: #d13b40;
+}
+.call__join {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  background: rgba(8, 13, 20, 0.72);
+  backdrop-filter: blur(6px);
+}
+.call__join-kicker {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #5eead4;
+}
+.call__join-title {
+  margin: 0;
+  font: 600 clamp(30px, 3.4vw, 46px) / 1.1 var(--font-display);
+}
+.call__join-text {
+  margin: 0 0 14px;
+  color: rgba(255, 255, 255, 0.82);
+}
+.call__join-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 26px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: #22a06b;
+  color: #fff;
+  font: 700 16px / 1 var(--font-ui);
+  cursor: pointer;
+  animation: call-ring 1.6s ease-in-out infinite;
+}
+@keyframes call-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 160, 107, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 14px rgba(34, 160, 107, 0);
+  }
+}
+.call__join-skip {
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: rgba(255, 255, 255, 0.78);
+  font: 600 14px / 1 var(--font-ui);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+@media (max-width: 819px) {
+  .call__grid {
+    gap: 8px;
+    padding: 4px 12px 8px;
+  }
+  .call__bar {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .call__avatar {
+    width: min(58%, 110px);
+  }
+  .call__name {
+    left: 8px;
+    bottom: 8px;
+    font-size: 12px;
+  }
+  .call__self {
+    display: none;
+  }
+  .call__caption {
+    width: calc(100% - 24px);
+    bottom: calc(80px + var(--safe-bottom));
+  }
+  .call__progress {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .call__join-btn {
+    animation: none;
+  }
+}
+
+/* ── Board Q&A (Page 9): one Board member at a time ────── */
+/* The room stays as context, blurred and dimmed; the member asking is the scene; the panel sits beside them. */
+.page09.is-session .sim-stage__bg {
+  filter: blur(7px) brightness(0.55);
+  scale: 1.02;
+  transition:
+    opacity 0.5s ease,
+    filter 0.45s ease,
+    scale 0.65s ease;
+}
+.page09.is-session.is-between .sim-stage__bg {
+  filter: blur(4px) brightness(0.62);
+}
+.page09.is-session .page09__copy {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.35s ease,
+    visibility 0s linear 0.35s;
+}
+.qa-hero {
+  --hero: min(72vh, 46vw);
+  position: absolute;
+  z-index: -1;
+  left: calc((58vw - var(--hero)) / 2);
+  top: calc(50% - var(--hero) / 2 + 2vh);
+  width: var(--hero);
+  height: var(--hero);
+  margin: 0;
+  border-radius: 24px;
+  overflow: hidden;
+  background: #0b1624;
+  box-shadow: 0 40px 90px rgba(3, 13, 24, 0.55);
+}
+.qa-hero video,
+.qa-hero img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+}
+.qa-hero.is-in {
+  animation: qa-enter 0.52s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.qa-hero.is-exiting {
+  opacity: 0;
+  transform: translateY(18px) scale(0.97);
+  transition:
+    opacity 0.35s ease,
+    transform 0.4s ease;
+}
+@keyframes qa-enter {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.qa-panel {
+  position: absolute;
+  z-index: 10;
+  right: var(--stage-pad-x);
+  top: 13vh;
+  bottom: 8vh;
+  width: min(560px, 38vw);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  animation: fade-up 0.42s var(--ease-out) 0.18s both;
+  transition: opacity 0.3s ease;
+}
+.qa-panel::-webkit-scrollbar {
+  display: none;
+}
+.qa-panel.is-exiting {
+  opacity: 0;
+}
+.qa-who {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.qa-who__name {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.qa-who__role {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.72);
+}
+/* Their words, attached to them: the rule on the left points back towards the speaker. */
+.qa-question {
+  margin: 0;
+  padding: 2px 0 2px 18px;
+  border-left: 3px solid rgba(255, 255, 255, 0.75);
+  font: 500 clamp(20px, 1.6vw, 27px) / 1.28 var(--font-display);
+  color: #fff;
+  text-shadow: 0 2px 18px rgba(5, 14, 25, 0.5);
+  animation: fade-in 0.3s ease both;
+}
+.qa-respond,
+.qa-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: fade-up 0.36s var(--ease-out) both;
+}
+.qa-respond .voice-field textarea {
+  min-height: 112px;
+}
+.qa-note {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(245, 212, 154, 0.14);
+  color: #f5d49a;
+  font-size: 14.5px;
+}
+.qa-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.qa-recall__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.qa-recall__detail {
+  margin: 10px 0 0;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: rgba(8, 22, 39, 0.82);
+  color: #fff;
+  font-size: 14px;
+  animation: fade-in 0.2s ease;
+}
+.qa-choose {
+  padding: 18px 20px;
+  animation: fade-up 0.32s var(--ease-out) both;
+}
+.qa-choose .panel-title {
+  font-size: 18px;
+}
+.qa-reaction {
+  margin: 0;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--ink);
+  font: 500 clamp(18px, 1.35vw, 22px) / 1.35 var(--font-display);
+  box-shadow: var(--shadow-soft);
+}
+.qa-reaction__who {
+  display: block;
+  margin-bottom: 6px;
+  font: 700 11.5px / 1 var(--font-ui);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.qa-feedback__chosen {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.78);
+}
+.qa-feedback__text {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.92);
+}
+@media (min-width: 820px) and (max-width: 1279px) {
+  .qa-hero {
+    --hero: min(62vh, 48vw);
+    left: calc((56vw - var(--hero)) / 2);
+  }
+  .qa-panel {
+    width: 40vw;
+  }
+}
+/* Phone portrait: the member on top, the conversation below them. */
+@media (max-width: 819px) and (orientation: portrait) {
+  .qa-hero {
+    inset: 0 0 auto;
+    width: auto;
+    height: 50dvh;
+    border-radius: 0;
+    box-shadow: none;
+    -webkit-mask-image: linear-gradient(180deg, #000 80%, transparent);
+    mask-image: linear-gradient(180deg, #000 80%, transparent);
+  }
+  .qa-panel {
+    position: fixed;
+    z-index: 20;
+    top: calc(50dvh - 18px);
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: auto;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 18px 18px max(24px, env(safe-area-inset-bottom));
+    background: rgba(12, 18, 24, 0.95);
+    border-radius: 20px 20px 0 0;
+  }
+  .qa-question {
+    font-size: 18px;
+  }
+  .qa-respond .voice-field textarea {
+    min-height: 84px;
+  }
+}
+/* Phone landscape: the conversation in the side rail, the member beside it. */
+@media (max-height: 560px) and (orientation: landscape) {
+  .qa-hero {
+    inset: 52px 4vw 12px calc(var(--rail-w) + 4vw);
+    width: auto;
+    height: auto;
+    border-radius: 18px;
+  }
+  .qa-panel {
+    left: 0;
+    right: auto;
+    top: 0;
+    bottom: 0;
+    width: var(--rail-w);
+    justify-content: flex-start;
+    padding: 44px 18px 12px 20px;
+    background: rgba(8, 18, 31, 0.9);
+  }
+  .qa-question {
+    font-size: 16px;
+  }
+  .qa-respond .voice-field textarea {
+    min-height: 64px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qa-hero.is-in,
+  .qa-panel {
+    animation: none;
+  }
+}
+
+/* ── Board call notification (Page 4) ──────────────────── */
+/* Optional: rings in the top right like a video-call app, never covering the page's work. */
+.call-toast {
+  position: fixed;
+  z-index: 55;
+  top: calc(72px + env(safe-area-inset-top, 0px));
+  right: 20px;
+  width: min(380px, calc(100vw - 24px));
+  padding: 14px 16px 14px;
+  border-radius: 16px;
+  background: rgba(22, 28, 38, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-family: var(--font-ui);
+  animation: toast-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(28px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.call-toast__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.call-toast__live {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22a06b;
+  animation: toast-ring 1.6s ease-in-out infinite;
+}
+@keyframes toast-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 160, 107, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(34, 160, 107, 0);
+  }
+}
+.call-toast__kicker {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.8);
+}
+.call-toast__optional {
+  margin-left: auto;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.88);
+}
+.call-toast__body {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.call-toast__faces {
+  display: grid;
+  grid-template-columns: repeat(2, 26px);
+  gap: 3px;
+  flex: none;
+}
+.call-toast__faces img {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid rgba(22, 28, 38, 1);
+}
+.call-toast__title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.call-toast__text {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.78);
+}
+.call-toast__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.call-toast__join,
+.call-toast__dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  font: 600 14px / 1 var(--font-ui);
+  cursor: pointer;
+}
+.call-toast__join {
+  flex: 1;
+  border: 0;
+  background: #22a06b;
+  color: #fff;
+}
+.call-toast__join:hover {
+  background: #1c8a5c;
+}
+.call-toast__dismiss {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: none;
+  color: #fff;
+}
+.call-toast__dismiss:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+@media (max-width: 819px) and (orientation: portrait) {
+  .call-toast {
+    top: calc(64px + env(safe-area-inset-top, 0px));
+    right: 12px;
+  }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .call-toast {
+    top: 44px;
+    right: 12px;
+    width: min(340px, calc(100vw - var(--rail-w) - 24px));
+    padding: 10px 12px;
+  }
+  .call-toast__text {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .call-toast,
+  .call-toast__live {
+    animation: none;
   }
 }

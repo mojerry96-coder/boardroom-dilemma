@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Quotes } from '@phosphor-icons/react';
 import { PORTRAIT_BACKDROPS, PORTRAITS, SCENES, STAKEHOLDER_CLIPS } from '../assets';
 import { usePageIntro } from '../components/Experience';
@@ -40,7 +40,15 @@ export function Page06Stakeholders() {
   const onStage = useDelayed(intro.ready, openingDelay);
 
   // The stakeholder speaks once they are on screen; their words type in with the voice, then the choices appear.
-  const spoken = useSpeakOnce(`stakeholder-${active.id}`, active.line, !answer && onStage);
+  const heard = useSpeakOnce(`stakeholder-${active.id}`, active.line, !answer && onStage);
+  // A short beat after they finish speaking, then the answers appear (per stakeholder).
+  const [settledFor, setSettledFor] = useState<StakeholderId | null>(null);
+  useEffect(() => {
+    if (!heard) return;
+    const id = window.setTimeout(() => setSettledFor(active.id), 450);
+    return () => window.clearTimeout(id);
+  }, [heard, active.id]);
+  const spoken = heard && settledFor === active.id;
   const quoteDelay = (active.id === firstShown ? openingDelay : 0) + VOICE_LEAD_MS;
 
   const remembered = STAKEHOLDERS.filter((s) => s.id !== active.id && sim.stakeholderResponses[s.id]);
@@ -57,26 +65,16 @@ export function Page06Stakeholders() {
   return (
     <SimulationStage
       page={6}
-      image={isRegulator ? SCENES.regulator : PORTRAIT_BACKDROPS[active.id as Exclude<StakeholderId, 'regulator'>]}
+      image={PORTRAIT_BACKDROPS[active.id]}
       label="Stakeholder Pressure"
       wash="strong"
       intro={intro}
       backdrop={
-        // The stakeholder holds still until their line begins, then moves once and keeps looking at the player.
-        isRegulator ? (
-          <PresenceClip
-            key={active.id}
-            className="sim-stage__bg is-loaded page06__scene-clip"
-            style={{ objectPosition: SCENES.regulator.position }}
-            clip={STAKEHOLDER_CLIPS.regulator}
-            play={onStage && !answer}
-            still={!!answer}
-          />
-        ) : (
-          <figure className="page06__portrait" key={active.id} role="img" aria-label={PORTRAITS[active.id as Exclude<StakeholderId, 'regulator'>].alt}>
-            <PresenceClip clip={STAKEHOLDER_CLIPS[active.id]} play={onStage && !answer} still={!!answer} />
-          </figure>
-        )
+        // The person speaking has their own zone; the question and answers never sit on top of them.
+        // They hold still until their line begins, move once, then keep looking at the player.
+        <figure className={`page06__portrait${isRegulator ? ' page06__portrait--scene' : ''}`} key={active.id} role="img" aria-label={isRegulator ? SCENES.regulator.alt : PORTRAITS[active.id as Exclude<StakeholderId, 'regulator'>].alt}>
+          <PresenceClip clip={STAKEHOLDER_CLIPS[active.id]} play={onStage && !answer} still={!!answer} />
+        </figure>
       }
     >
       <StageCopy className="page06__copy" eyebrow={BRAND.eyebrow} title={PAGE_META[6].title} subtitle={SUBTITLE} objective={OBJECTIVES[6]} intro={intro}>

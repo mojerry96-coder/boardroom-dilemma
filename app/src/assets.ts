@@ -1,4 +1,5 @@
 import { IMAGE_VARIANTS } from './imageManifest';
+import type { CallSpeaker } from './sim/crisisCall';
 import type { EvidenceId, Opt, StakeholderId } from './sim/types';
 
 // Asset manifest. Scene stills are generated (Seedream 5.0 Pro / Soul 2.0) and optimised
@@ -105,7 +106,8 @@ export const PORTRAITS: Record<Exclude<StakeholderId, 'regulator'>, SceneImage> 
 };
 
 /** Pre-blurred backdrops behind the stakeholder portrait card (avoids a live CSS blur on phones). */
-export const PORTRAIT_BACKDROPS: Record<Exclude<StakeholderId, 'regulator'>, SceneImage> = {
+export const PORTRAIT_BACKDROPS: Record<StakeholderId, SceneImage> = {
+  regulator: { src: scene('regulator_bg.jpg'), alt: '', standIn: false },
   employee: { src: scene('employee_bg.jpg'), alt: '', standIn: false },
   journalist: { src: scene('journalist_bg.jpg'), alt: '', standIn: false },
   family: { src: scene('family_bg.jpg'), alt: '', standIn: false },
@@ -217,6 +219,17 @@ export const EXECUTIVE_BRANCH_END: Record<Opt, string> = {
   C: film('executive_branch_c_end.webp'),
   D: film('executive_branch_d_end.webp'),
 };
+
+const call = (file: string) => `${base}call/${file}`;
+
+/** Page 4: the emergency Board call. Camera-off profile photos, and the call as one recording. */
+export const CALL_AVATARS: Record<CallSpeaker, string> = {
+  chair: call('avatar_chair.webp'),
+  ined: call('avatar_ined.webp'),
+  md: call('avatar_md.webp'),
+  okafor: call('avatar_okafor.webp'),
+};
+export const CALL_AUDIO = { webm: call('crisis_call.webm'), mp3: call('crisis_call.mp3') };
 
 const prop = (file: string) => `${base}props/${file}`;
 

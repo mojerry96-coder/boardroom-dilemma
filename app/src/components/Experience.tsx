@@ -57,7 +57,7 @@ function previouslyLine(sim: SimState, page: number): string | null {
       return sim.evidence.complete
         ? sim.reviewOrderCorrect
           ? 'You verified the record in a defensible order.'
-          : 'You reviewed the record — after reaching ahead once.'
+          : 'You reviewed the record, after reaching ahead once.'
         : null;
     case 5:
       return sim.boardFraming && sim.selfReportDecision
