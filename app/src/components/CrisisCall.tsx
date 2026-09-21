@@ -59,26 +59,38 @@ export function CrisisCall({ learnerName, onEnd, autoJoin = false }: { learnerNa
   }, [autoJoin]);
 
   // Follow the recording: who is speaking, and how loudly (drives the ring around their photo).
+  // The level meter routes the call through Web Audio only once an audio context is confirmed running:
+  // an element tied to a suspended context would stall, so otherwise the call plays directly and the
+  // speaking ring keeps a steady pulse instead.
   useEffect(() => {
     if (!joined) return;
     const a = el.current;
     if (!a) return;
+    let cancelled = false;
     let analyser: AnalyserNode | null = null;
     let ctx: AudioContext | null = null;
+    let data = new Uint8Array(0);
     if (!prefersReducedMotion()) {
       try {
-        ctx = new AudioContext();
-        const source = ctx.createMediaElementSource(a);
-        analyser = ctx.createAnalyser();
-        analyser.fftSize = 512;
-        source.connect(analyser);
-        analyser.connect(ctx.destination);
-        void ctx.resume();
+        const c = new AudioContext();
+        const timeout = new Promise((r) => window.setTimeout(r, 400));
+        void Promise.race([c.resume(), timeout]).then(() => {
+          if (cancelled || c.state !== 'running') {
+            void c.close();
+            return;
+          }
+          ctx = c;
+          const source = c.createMediaElementSource(a);
+          analyser = c.createAnalyser();
+          analyser.fftSize = 512;
+          source.connect(analyser);
+          analyser.connect(c.destination);
+          data = new Uint8Array(analyser.fftSize);
+        });
       } catch {
         analyser = null;
       }
     }
-    const data = new Uint8Array(analyser?.fftSize ?? 0);
     let raf = 0;
     let smooth = 0;
     const tick = () => {
@@ -97,8 +109,9 @@ export function CrisisCall({ learnerName, onEnd, autoJoin = false }: { learnerNa
     };
     raf = requestAnimationFrame(tick);
     return () => {
+      cancelled = true;
       cancelAnimationFrame(raf);
-      void ctx?.close();
+      void (ctx as AudioContext | null)?.close();
     };
   }, [joined]);
 
