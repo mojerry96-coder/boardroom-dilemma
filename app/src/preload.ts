@@ -1,4 +1,4 @@
-import { CALL_AUDIO, CALL_AVATARS, DOC_PHOTOS, EXECUTIVE_BRANCH_END, EXECUTIVE_WAIT, FILMS, FOLDER_ART, PORTRAIT_BACKDROPS, PORTRAITS, PROPS, SCENES, SPEAKER_CLIPS, STAKEHOLDER_CLIPS, TABLE_SHEETS } from './assets';
+import { CALL_AUDIO, CALL_AVATARS, DOC_PHOTOS, EXECUTIVE_BRANCH_END, EXECUTIVE_WAIT, FILMS, FOLDER_ART, PORTRAIT_BACKDROPS, PORTRAITS, PROPS, SCENES, QUESTION_CLIPS, SPEAKER_CLIPS, STAKEHOLDER_CLIPS, TABLE_SHEETS } from './assets';
 import { warm, warmPicture } from './media';
 import { ENDINGS, EXECUTIVE, NARRATION, Q1_COMPLIANCE, Q1_RELATIONSHIP, Q2, STAKEHOLDERS } from './sim/content';
 import { BRIEFING, CHAPTERS, GUIDE } from './sim/experience';
@@ -45,7 +45,7 @@ const PAGE_MEDIA: Record<number, PageMedia> = {
   },
   9: {
     pictures: [SCENES.boardQA.src],
-    images: Object.values(SPEAKER_CLIPS).flatMap((clip) => [clip.start, clip.end]),
+    images: [...Object.values(SPEAKER_CLIPS), ...Object.values(QUESTION_CLIPS)].flatMap((clip) => [clip.start, clip.end]),
     lines: [
       CHAPTERS[9].bridge,
       GUIDE.qaLoad,

@@ -22,8 +22,11 @@ interface NarrationValue extends Prefs {
   stop: () => void;
   setAudio: (on: boolean) => void;
   setCaptions: (on: boolean) => void;
-  /** Speak a single line without touching the caption (the line is already on screen). */
-  speakOnly: (text: string, onDone?: () => void) => void;
+  /**
+   * Speak a single line without touching the caption (the line is already on screen). onStart runs as the
+   * voice actually begins (at once when audio is off), so a lip-synced clip can start with it.
+   */
+  speakOnly: (text: string, onDone?: () => void, onStart?: () => void) => void;
 }
 
 // v2: captions became opt-in. Audio and music choices carry over from the earlier key; captions start off.
@@ -94,7 +97,7 @@ export function NarrationProvider({ children }: { children: ReactNode }) {
   }, [silence]);
 
   /** Speak one line in the recorded voice (or synthesis as a fallback); calls onDone when finished. */
-  const speak = useCallback((line: string, onDone?: () => void) => {
+  const speak = useCallback((line: string, onDone?: () => void, onStart?: () => void) => {
     const sources = voiceSourcesFor(line);
     if (sources.length) {
       const a = (player.current ??= new Audio());
@@ -110,11 +113,16 @@ export function NarrationProvider({ children }: { children: ReactNode }) {
             a.onended = () => onDone?.();
             a.onerror = () => attempt(i + 1);
             a.src = url;
-            a.play().catch((err: DOMException) => {
-              if (!current()) return;
-              if (err?.name === 'NotAllowedError') onDone?.();
-              else attempt(i + 1);
-            });
+            a.play().then(
+              () => {
+                if (current()) onStart?.();
+              },
+              (err: DOMException) => {
+                if (!current()) return;
+                if (err?.name === 'NotAllowedError') onDone?.();
+                else attempt(i + 1);
+              },
+            );
           },
           () => attempt(i + 1),
         );
@@ -129,6 +137,7 @@ export function NarrationProvider({ children }: { children: ReactNode }) {
     const voice = pickVoice();
     if (voice) u.voice = voice;
     u.rate = 0.98;
+    u.onstart = () => onStart?.();
     u.onend = () => onDone?.();
     u.onerror = () => onDone?.();
     s.speak(u);
@@ -180,8 +189,9 @@ export function NarrationProvider({ children }: { children: ReactNode }) {
   }, [clear]);
 
   const speakOnly = useCallback(
-    (text: string, onDone?: () => void) => {
+    (text: string, onDone?: () => void, onStart?: () => void) => {
       if (!prefsRef.current.audio) {
+        onStart?.();
         // Without audio, allow roughly the time it takes to read the line.
         if (onDone) window.setTimeout(onDone, Math.max(1800, text.split(/\s+/).length * 330));
         return;
@@ -195,7 +205,7 @@ export function NarrationProvider({ children }: { children: ReactNode }) {
         setVoices((n) => Math.max(0, n - 1));
         onDone?.();
       };
-      speak(text, finish);
+      speak(text, finish, onStart);
       // Safety net only (the recording normally reports its own end): generous, so it never cuts in early.
       if (onDone) window.setTimeout(finish, Math.max(5000, text.split(/\s+/).length * 650 + 2500));
     },
@@ -254,11 +264,16 @@ export function useNarrateOnce(key: string, text: string | string[] | null, enab
   return doneKey === key;
 }
 
-/** Speaks a line that is already shown on screen (no caption). Returns true once it has been spoken. */
-export function useSpeakOnce(key: string, text: string | null, enabled = true): boolean {
+/**
+ * Speaks a line that is already shown on screen (no caption). Returns true once it has been spoken.
+ * onStart runs as the voice begins (see speakOnly).
+ */
+export function useSpeakOnce(key: string, text: string | null, enabled = true, onStart?: (key: string) => void): boolean {
   const { speakOnly } = useNarration();
   const said = useRef<string | null>(null);
   const [doneKey, setDoneKey] = useState<string | null>(null);
+  const onStartRef = useRef(onStart);
+  onStartRef.current = onStart;
   const textRef = useRef(text);
   textRef.current = text;
   useEffect(() => {
@@ -267,8 +282,11 @@ export function useSpeakOnce(key: string, text: string | null, enabled = true): 
     const id = window.setTimeout(() => {
       fired = true;
       said.current = key;
-      if (textRef.current) speakOnly(textRef.current, () => setDoneKey(key));
-      else setDoneKey(key);
+      if (textRef.current) speakOnly(textRef.current, () => setDoneKey(key), () => onStartRef.current?.(key));
+      else {
+        onStartRef.current?.(key);
+        setDoneKey(key);
+      }
     }, 400);
     return () => {
       if (!fired) window.clearTimeout(id);

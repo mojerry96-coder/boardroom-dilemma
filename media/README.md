@@ -59,6 +59,12 @@ A pre-mixed call in `app/public/call/crisis_call.{webm,mp3}`, with camera-off pr
 | Managing Director | sim-boardroom-md – designed (`FxGawZyHOnLEtD4jik9x`) |
 | Chidi Okafor | sim-boardroom-okafor – designed (`pQ8wletSSWpzUEhW9Hkm`) |
 
+### Talking clips (Pages 6 and 9, Kling 3.0)
+
+The four stakeholders and the three scored Board questions play as clips of the character saying the line, lip-synced, generated with Kling 3.0 (sound on) from each character's portrait. Their voice is Kling's, not the ElevenLabs voice above: the clip's soundtrack becomes the line's recording (`char_regulator`, `char_employee`, `char_journalist`, `char_family`, `qa_q1_relationship`, `qa_q1_compliance`, `qa_q2`), and the muted clip starts the moment that recording does (`onStart` in `useSpeakOnce`). The Chair's and Director's reactions and the Director's follow-ups keep their ElevenLabs voices, so the voice changes between a question and the reaction to the answer. This was a deliberate choice.
+
+`build_talking_clips.py` takes the downloads from `talking/` (not committed), cuts video and audio at the same points around the speech, crops each clip to match the framing of the earlier presence clip, and writes `app/public/speakers/<name>.mp4` with `_start`/`_end` frames and the voice files (-16 LUFS, MP3 160k and Opus 64k). Do not run `normalise_voice.py` on those seven names: it would bring back the ElevenLabs takes, which no longer match the lips.
+
 The Board follow-ups are filled in from the learner's diagnosis, so each reachable wording is recorded separately. Their file names are built from lever codes: `ag`, `st`, `sr`. `app/src/voice.test.ts` fails if any mapped line is missing its file.
 
 Character lines are used as recorded: never sped up, slowed down or stripped of pauses. `normalise_voice.py` rebuilds `app/public/voice` from the untouched recordings (edge silence trimmed, -16 LUFS, -1.5 dBTP, MP3 160k and Opus 64k). The earlier retimed files are in `audio/voice_backup_20260918/`. Bump `VERSION` in `app/public/sw.js` whenever files are replaced under the same names.

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ChatCircle, FileText, Newspaper, Pulse, Scales, Warning } from '@phosphor-icons/react';
-import { SCENES, SPEAKER_CLIPS } from '../assets';
+import { QUESTION_CLIPS, SCENES, SPEAKER_CLIPS } from '../assets';
 import { usePageIntro } from '../components/Experience';
 import { useNarration, useSpeakOnce } from '../components/Narration';
 import { RadioPanel } from '../components/RadioPanel';
@@ -112,16 +112,21 @@ export function Page09BoardQA() {
   }, [inSession, state]);
 
   // asking: the question is spoken as it types in; a short beat after it ends, the learner may answer.
-  const heard = useSpeakOnce(`qa-${turn.key}`, turn.text, inSession && state === 'asking');
+  // A scored question's clip is the member asking it, so it starts as the voice does.
+  const [voiceStarted, setVoiceStarted] = useState<string | null>(null);
+  const heard = useSpeakOnce(`qa-${turn.key}`, turn.text, inSession && state === 'asking', setVoiceStarted);
   useEffect(() => {
     if (state !== 'asking' || !heard) return;
     const id = window.setTimeout(() => setState('awaiting-response'), 400);
     return () => window.clearTimeout(id);
   }, [state, heard]);
 
-  // A member appears fresh (their presence beat plays) only the first time they come forward.
+  const clip = (turn.scored && QUESTION_CLIPS[turn.scored.shuffleKey]) || SPEAKER_CLIPS[turn.speaker];
+
+  // A member appears fresh (their presence beat plays) only the first time they come forward;
+  // a clip of them asking the question plays whenever they ask it.
   const introduced = useRef(new Set<string>());
-  const fresh = !introduced.current.has(turn.speaker) && state !== 'feedback';
+  const fresh = (clip?.talking || !introduced.current.has(turn.speaker)) && state !== 'feedback';
   useEffect(() => {
     if (inSession) introduced.current.add(turn.speaker);
   }, [inSession, turn.speaker]);
@@ -178,7 +183,6 @@ export function Page09BoardQA() {
         : [{ label: 'Accountability diagnosis', detail: `Primary failure: ${tokens.primaryFailure}`, icon: <Pulse size={20} /> }];
   const chips = candidates.filter((c): c is MemoryChip => c !== null);
 
-  const clip = SPEAKER_CLIPS[turn.speaker];
   const focused = inSession && state !== 'exiting';
 
   let interaction: ReactNode = null;
@@ -259,7 +263,12 @@ export function Page09BoardQA() {
       backdrop={
         inSession && clip ? (
           <figure key={turn.speaker} className={`qa-hero is-${state === 'exiting' ? 'exiting' : 'in'}`} aria-hidden="true">
-            <PresenceClip clip={clip} play={state === 'asking' || state === 'awaiting-response'} still={!fresh} />
+            <PresenceClip
+              key={clip.video}
+              clip={clip}
+              play={clip.talking ? voiceStarted === `qa-${turn.key}` : state === 'asking' || state === 'awaiting-response'}
+              still={!fresh}
+            />
           </figure>
         ) : undefined
       }

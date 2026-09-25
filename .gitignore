@@ -20,6 +20,7 @@ media/video/
 media/build/
 media/preview/
 media/audio/
+media/talking/
 
 # Old stand-in stills derived from the mockups (no longer used by the app)
 app/public/standins/

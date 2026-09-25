@@ -174,8 +174,13 @@ const speakerMedia = (file: string) => `${base}speakers/${file}`;
 export interface SpeakerClip {
   /** Name tag on the card, when the full title is too long for it. */
   label?: string;
-  /** Short silent presence beat (about 3–5s). */
+  /**
+   * A short silent presence beat (about 3–5s), or, when `talking`, the character speaking their line with
+   * lip sync (Kling 3.0). A talking clip's soundtrack is the line's recording in public/voice, so the clip
+   * plays muted and starts as the voice begins.
+   */
   video: string;
+  talking?: boolean;
   /** First frame, shown while the clip loads. */
   start: string;
   /** Final frame (looking at the player), shown on return visits and with reduced motion. */
@@ -197,12 +202,26 @@ export const SPEAKER_CLIPS: Record<string, SpeakerClip> = {
   },
 };
 
-/** Page 6: each stakeholder's short silent presence beat, played as their recorded line begins. */
+const talkingClip = (name: string): SpeakerClip => ({
+  video: speakerMedia(`${name}.mp4`),
+  start: speakerMedia(`${name}_start.webp`),
+  end: speakerMedia(`${name}_end.webp`),
+  talking: true,
+});
+
+/** Page 6: each stakeholder speaking their line, started as their recording begins. */
 export const STAKEHOLDER_CLIPS: Record<StakeholderId, SpeakerClip> = {
-  regulator: { video: speakerMedia('regulator.mp4'), start: speakerMedia('regulator_start.webp'), end: speakerMedia('regulator_end.webp') },
-  employee: { video: speakerMedia('employee.mp4'), start: speakerMedia('employee_start.webp'), end: speakerMedia('employee_end.webp') },
-  journalist: { video: speakerMedia('journalist.mp4'), start: speakerMedia('journalist_start.webp'), end: speakerMedia('journalist_end.webp') },
-  family: { video: speakerMedia('family.mp4'), start: speakerMedia('family_start.webp'), end: speakerMedia('family_end.webp') },
+  regulator: talkingClip('regulator_talk'),
+  employee: talkingClip('employee_talk'),
+  journalist: talkingClip('journalist_talk'),
+  family: talkingClip('family_talk'),
+};
+
+/** Page 9: the Board member asking each scored question, keyed by the question's shuffle key. */
+export const QUESTION_CLIPS: Record<string, SpeakerClip> = {
+  'q1-relationship': talkingClip('board_chair_q1_relationship'),
+  'q1-compliance': talkingClip('board_chair_q1_compliance'),
+  q2: { ...talkingClip('independent_director_q2'), label: 'Independent Director' },
 };
 
 /** Page 7: the executive waits for the player's answer. Starts on the corridor film's final frame. */

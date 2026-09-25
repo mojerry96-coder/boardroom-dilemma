@@ -40,7 +40,10 @@ export function Page06Stakeholders() {
   const onStage = useDelayed(intro.ready, openingDelay);
 
   // The stakeholder speaks once they are on screen; their words type in with the voice, then the choices appear.
-  const heard = useSpeakOnce(`stakeholder-${active.id}`, active.line, !answer && onStage);
+  // Their clip is them saying the line, so it starts as the voice does.
+  const [voiceStarted, setVoiceStarted] = useState<string | null>(null);
+  const heard = useSpeakOnce(`stakeholder-${active.id}`, active.line, !answer && onStage, setVoiceStarted);
+  const speaking = voiceStarted === `stakeholder-${active.id}`;
   // A short beat after they finish speaking, then the answers appear (per stakeholder).
   const [settledFor, setSettledFor] = useState<StakeholderId | null>(null);
   useEffect(() => {
@@ -71,9 +74,9 @@ export function Page06Stakeholders() {
       intro={intro}
       backdrop={
         // The person speaking has their own zone; the question and answers never sit on top of them.
-        // They hold still until their line begins, move once, then keep looking at the player.
+        // They hold still until their line begins, say it, then keep looking at the player.
         <figure className={`page06__portrait${isRegulator ? ' page06__portrait--scene' : ''}`} key={active.id} role="img" aria-label={isRegulator ? SCENES.regulator.alt : PORTRAITS[active.id as Exclude<StakeholderId, 'regulator'>].alt}>
-          <PresenceClip clip={STAKEHOLDER_CLIPS[active.id]} play={onStage && !answer} still={!!answer} />
+          <PresenceClip clip={STAKEHOLDER_CLIPS[active.id]} play={speaking && !answer} still={!!answer} />
         </figure>
       }
     >
